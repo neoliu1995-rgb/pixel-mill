@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+@media (max-width: 767px) {
+  body {
+    padding-bottom: 4rem;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Custom animations */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px 5px rgba(147, 51, 234, 0.2);
+  }
+}
+
+.animate-pulseGlow {
+  animation: pulseGlow 2s infinite;
+}
+
+/* Dark mode styles */
+.dark {
+  --background: #0f0f0f;
+  --foreground: #f0f0f0;
+}
+
+.dark body {
+  background-color: #0f0f0f;
+  color: #f0f0f0;
+}
+
+.dark .bg-white {
+  background-color: #1a1a1a;
+}
+
+.dark .bg-gray-50 {
+  background-color: #161616;
+}
+
+.dark .bg-gray-100 {
+  background-color: #242424;
+}
+
+.dark .border-gray-200 {
+  border-color: #374151;
+}
+
+.dark .border-gray-100 {
+  border-color: #374151;
+}
+
+.dark .text-gray-700 {
+  color: #d1d5db;
+}
+
+.dark .text-gray-600 {
+  color: #e5e7eb;
+}
+
+.dark .text-gray-500 {
+  color: #f3f4f6;
+}
+
+.dark .text-gray-400 {
+  color: #f9fafb;
+}
+
+.dark .text-gray-900 {
+  color: #ffffff;
+}
+
+.dark .hover\:bg-gray-100:hover {
+  background-color: #374151;
+}
+
+.dark .hover\:bg-gray-200:hover {
+  background-color: #4b5563;
+}
+
+.dark .bg-purple-50 {
+  background-color: rgba(147, 51, 234, 0.1);
+}
+
+.dark .bg-gradient-to-br {
+  background: linear-gradient(to bottom right, #0f0f0f, rgba(147, 51, 234, 0.05), #0f0f0f);
+}
+
+.dark .bg-gradient-to-r {
+  background: linear-gradient(to right, rgba(147, 51, 234, 0.1), rgba(236, 72, 153, 0.1));
+}
+
+.dark .placeholder-gray-500::placeholder {
+  color: #6b7280;
+}
