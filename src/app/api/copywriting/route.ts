@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { routeCopywriting } from "@/lib/providers/router";
+import { getCurrentUser } from "@/lib/auth";
 
 interface CopywritingRequest {
   productName: string;
@@ -13,6 +14,14 @@ interface CopywritingRequest {
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await getCurrentUser(req);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     const {
       productName,
       category,
@@ -20,19 +29,16 @@ export async function POST(req: NextRequest) {
       targetAudience,
       style = "professional",
       platform = "taobao",
-      userTier = "free",
+      userTier: requestUserTier,
     }: CopywritingRequest = await req.json();
+
+    const userTier = requestUserTier || (user.plan as "free" | "pro" | "business");
 
     if (!productName || typeof productName !== "string") {
       return NextResponse.json(
         { success: false, error: "产品名称为必填项" },
         { status: 400 }
       );
-    }
-
-    if (userTier === "free") {
-      console.log("Free tier: queuing...");
-      await new Promise(resolve => setTimeout(resolve, 3000));
     }
 
     const result = await routeCopywriting({

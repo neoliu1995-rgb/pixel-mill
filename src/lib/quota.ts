@@ -1,3 +1,5 @@
+import { prisma } from "@/lib/prisma";
+
 export interface QuotaConfig {
   dailyGenerations: number;
   monthlyGenerations: number;
@@ -13,29 +15,12 @@ export const QUOTA_LIMITS: Record<string, QuotaConfig> = {
 
 type UsageType = "dailyGenerations" | "monthlyGenerations" | "monthlyBgRemoval" | "monthlyCopywriting";
 
-interface UsageRecord {
-  count: number;
-  date: string;
-}
-
-const usageStore = new Map<string, UsageRecord>();
-
-function getDailyKey(userId: string, usageType: string): string {
-  const today = new Date().toISOString().split("T")[0];
-  return `${userId}:${usageType}:${today}`;
-}
-
-function getMonthlyKey(userId: string, usageType: string): string {
+function getPeriodKey(usageType: string): string {
   const now = new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  return `${userId}:${usageType}:${monthKey}`;
-}
-
-function getStorageKey(userId: string, usageType: string): string {
   if (usageType.startsWith("daily")) {
-    return getDailyKey(userId, usageType);
+    return now.toISOString().split("T")[0];
   }
-  return getMonthlyKey(userId, usageType);
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
 export function checkQuota(
@@ -57,30 +42,50 @@ export function checkQuota(
   };
 }
 
-export function getUsage(userId: string, usageType: string): number {
-  const key = getStorageKey(userId, usageType);
-  const record = usageStore.get(key);
+export async function getUsage(userId: string, usageType: string): Promise<number> {
+  const periodKey = getPeriodKey(usageType);
+  const record = await prisma.usageRecord.findUnique({
+    where: {
+      userId_usageType_periodKey: {
+        userId,
+        usageType,
+        periodKey,
+      },
+    },
+  });
   if (!record) return 0;
   return record.count;
 }
 
-export function incrementUsage(userId: string, usageType: string): number {
-  const key = getStorageKey(userId, usageType);
-  const record = usageStore.get(key);
-  if (!record) {
-    usageStore.set(key, { count: 1, date: new Date().toISOString() });
-    return 1;
-  }
-  record.count += 1;
+export async function incrementUsage(userId: string, usageType: string): Promise<number> {
+  const periodKey = getPeriodKey(usageType);
+  const record = await prisma.usageRecord.upsert({
+    where: {
+      userId_usageType_periodKey: {
+        userId,
+        usageType,
+        periodKey,
+      },
+    },
+    update: {
+      count: { increment: 1 },
+    },
+    create: {
+      userId,
+      usageType,
+      periodKey,
+      count: 1,
+    },
+  });
   return record.count;
 }
 
-export function getQuotaInfo(userId: string, tier: string) {
+export async function getQuotaInfo(userId: string, tier: string) {
   const config = QUOTA_LIMITS[tier] || QUOTA_LIMITS.free;
-  const dailyUsage = getUsage(userId, "dailyGenerations");
-  const monthlyUsage = getUsage(userId, "monthlyGenerations");
-  const bgRemovalUsage = getUsage(userId, "monthlyBgRemoval");
-  const copywritingUsage = getUsage(userId, "monthlyCopywriting");
+  const dailyUsage = await getUsage(userId, "dailyGenerations");
+  const monthlyUsage = await getUsage(userId, "monthlyGenerations");
+  const bgRemovalUsage = await getUsage(userId, "monthlyBgRemoval");
+  const copywritingUsage = await getUsage(userId, "monthlyCopywriting");
 
   return {
     daily: {

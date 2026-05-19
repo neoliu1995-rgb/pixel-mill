@@ -158,7 +158,7 @@ export class GeminiImageProvider implements ImageProvider {
       throw new Error("未配置 GEMINI_API_KEY");
     }
 
-    const modelId = "gemini-2.5-flash-image";
+    const modelId = options.model || "gemini-2.5-flash-image";
     const apiModel = MODEL_API_MAP[modelId];
     if (!apiModel) {
       throw new Error(`不支持的 Gemini 模型: ${modelId}`);

@@ -2,10 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { routeUpscale } from "@/lib/providers/router";
 import { upscaleWithCanvas } from "@/lib/upscale-server";
 import { addWatermark } from "@/lib/watermark";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl, scale = 2, useAI = true, userTier = "free" } = await req.json();
+    const user = await getCurrentUser(req);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    const { imageUrl, scale = 2, useAI = true, userTier: requestUserTier } = await req.json();
+    const userTier = requestUserTier || (user.plan as "free" | "pro" | "business");
 
     if (!imageUrl || typeof imageUrl !== "string") {
       return NextResponse.json(

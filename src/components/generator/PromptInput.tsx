@@ -30,7 +30,7 @@ export default function PromptInput({ value, onChange, disabled, placeholder }: 
         disabled={disabled}
         placeholder={placeholder || "Describe the image you want to create..."}
         className={cn(
-          "w-full min-h-[120px] p-4 text-base border border-gray-200 rounded-xl resize-none",
+          "w-full min-h-[100px] sm:min-h-[120px] p-3 sm:p-4 text-base border border-gray-200 rounded-xl resize-none",
           "focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent",
           "placeholder:text-gray-400 transition-all",
           disabled && "opacity-50 cursor-not-allowed bg-gray-50"

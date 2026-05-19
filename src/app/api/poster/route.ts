@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { routeCopywriting } from "@/lib/providers/router";
 import { routeGenerate } from "@/lib/providers/router";
+import { getCurrentUser } from "@/lib/auth";
 
 interface PosterRequest {
   productName: string;
@@ -27,14 +28,24 @@ const SIZE_MAP: Record<string, { width: number; height: number }> = {
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await getCurrentUser(req);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     const {
       productName,
       productImageUrl,
       template = "promotion",
       size = "taobao_main",
       brandColor,
-      userTier = "free",
+      userTier: requestUserTier,
     }: PosterRequest = await req.json();
+
+    const userTier = requestUserTier || (user.plan as "free" | "pro" | "business");
 
     if (!productName || typeof productName !== "string") {
       return NextResponse.json(
@@ -48,10 +59,6 @@ export async function POST(req: NextRequest) {
         { success: false, error: "产品图片为必填项" },
         { status: 400 }
       );
-    }
-
-    if (userTier === "free") {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
     }
 
     const copyResult = await routeCopywriting({

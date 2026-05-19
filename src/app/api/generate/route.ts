@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateImage, GenerationResult, getAvailableModels } from "@/lib/imageGenerator";
 import { addWatermark } from "@/lib/watermark";
 import { checkQuota, incrementUsage, getUsage, getQuotaInfo, QUOTA_LIMITS } from "@/lib/quota";
+import { getCurrentUser, AuthUser } from "@/lib/auth";
+import { authenticateApiKey } from "@/lib/apikey";
+import { uploadImage } from "@/lib/storage";
+import { logger } from "@/lib/logger";
+import { prisma } from "@/lib/prisma";
 
 export type ModelType = "flux-schnell" | "flux-dev" | "sdxl" | "turbo" | "realistic" | "anime" | "auto"
   | "black-forest-labs/FLUX.2-pro" | "black-forest-labs/FLUX.2-flex" | "Zhihu-ai/Z-Image-Turbo"
@@ -53,6 +58,33 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    let user: AuthUser | null = await getCurrentUser(req);
+
+    if (!user) {
+      const apiKeyResult = await authenticateApiKey(req);
+      if (apiKeyResult) {
+        if (apiKeyResult.plan === "free") {
+          return NextResponse.json(
+            { error: "API key access requires a Pro or Business plan" },
+            { status: 403 }
+          );
+        }
+        user = {
+          id: apiKeyResult.userId,
+          email: "",
+          name: null,
+          plan: apiKeyResult.plan,
+        };
+      }
+    }
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     const startTime = Date.now();
 
     const {
@@ -62,12 +94,14 @@ export async function POST(req: NextRequest) {
       model = "auto",
       image,
       negativePrompt,
-      userTier = "free",
+      userTier: requestUserTier,
       style,
       color,
       lighting,
       composition,
     }: GenerationRequest = await req.json();
+
+    const userTier = requestUserTier || (user.plan as "free" | "pro" | "business");
 
     console.log(`[${new Date().toISOString()}] Generation request:`, {
       promptLength: prompt?.length || 0,
@@ -107,9 +141,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const userId = "default";
-    const dailyUsage = getUsage(userId, "dailyGenerations");
-    const monthlyUsage = getUsage(userId, "monthlyGenerations");
+    const userId = user.id;
+    const dailyUsage = await getUsage(userId, "dailyGenerations");
+    const monthlyUsage = await getUsage(userId, "monthlyGenerations");
 
     const dailyCheck = checkQuota(userTier, "dailyGenerations", dailyUsage);
     const monthlyCheck = checkQuota(userTier, "monthlyGenerations", monthlyUsage);
@@ -151,11 +185,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (userTier === "free") {
-      console.log("Free tier: queuing...");
-      await new Promise(resolve => setTimeout(resolve, 3000));
-    }
-
     const result: GenerationResult = await generateImage(
       { prompt, width, height, model, image, negativePrompt, style, color, lighting, composition },
       userTier
@@ -168,17 +197,40 @@ export async function POST(req: NextRequest) {
       try {
         finalImageUrl = await addWatermark(result.imageUrl);
       } catch (wmError) {
-        console.error("Watermark error:", wmError);
+        logger.error("Watermark error:", { error: wmError });
       }
     }
 
-    console.log(`Generation successful! Provider: ${result.provider}, Model: ${result.model}, Latency: ${totalLatency}ms, Cost: ${result.cost}`);
+    let r2Url: string | null = null;
+    try {
+      r2Url = await uploadImage(finalImageUrl, userId);
+      if (r2Url !== finalImageUrl) {
+        finalImageUrl = r2Url;
+      }
+    } catch (uploadError) {
+      logger.error("R2 upload error:", { error: uploadError });
+    }
 
-    incrementUsage(userId, "dailyGenerations");
-    incrementUsage(userId, "monthlyGenerations");
+    console.log(`Generation successful! Provider: ${result.provider}, Model: ${result.model}, Latency: ${totalLatency}ms, Cost: ${result.cost}, R2: ${r2Url ? "yes" : "no"}`);
 
-    const updatedDailyUsage = getUsage(userId, "dailyGenerations");
-    const updatedMonthlyUsage = getUsage(userId, "monthlyGenerations");
+    await incrementUsage(userId, "dailyGenerations");
+    await incrementUsage(userId, "monthlyGenerations");
+
+    try {
+      await prisma.generationHistory.create({
+        data: {
+          userId,
+          prompt: result.prompt,
+          model: model,
+          imageUrl: finalImageUrl,
+        },
+      });
+    } catch (historyError) {
+      console.error("Failed to save generation history:", historyError);
+    }
+
+    const updatedDailyUsage = await getUsage(userId, "dailyGenerations");
+    const updatedMonthlyUsage = await getUsage(userId, "monthlyGenerations");
     const config = QUOTA_LIMITS[userTier] || QUOTA_LIMITS.free;
 
     return NextResponse.json<GenerationResponse>({
@@ -197,10 +249,11 @@ export async function POST(req: NextRequest) {
         "X-RateLimit-Remaining-Daily": String(Math.max(0, config.dailyGenerations - updatedDailyUsage)),
         "X-RateLimit-Limit-Monthly": String(config.monthlyGenerations),
         "X-RateLimit-Remaining-Monthly": String(Math.max(0, config.monthlyGenerations - updatedMonthlyUsage)),
+        "Cache-Control": "public, max-age=86400",
       },
     });
   } catch (error) {
-    console.error("Generation error:", error);
+    logger.error("Generation error:", { error });
     return NextResponse.json(
       { error: "生成图片失败，请重试。" },
       { status: 500 }

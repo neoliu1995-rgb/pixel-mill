@@ -36,11 +36,11 @@ export default function Header() {
         <div className="flex items-center gap-4">
           <ThemeToggle />
           <LanguageSwitcher />
-          <button className="hidden sm:inline-flex items-center justify-center rounded-full bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 transition-colors">
+          <button className="hidden sm:inline-flex items-center justify-center rounded-full bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 transition-colors min-h-[44px]">
             {t.nav.getStarted}
           </button>
           <button
-            className="md:hidden p-2 text-gray-700 hover:text-purple-600 transition-colors"
+            className="md:hidden p-2 text-gray-700 hover:text-purple-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -56,12 +56,12 @@ export default function Header() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-lg font-medium text-gray-700 hover:text-purple-600 transition-colors"
+                className="text-lg font-medium text-gray-700 hover:text-purple-600 transition-colors min-h-[44px] flex items-center"
               >
                 {link.label}
               </Link>
             ))}
-            <button className="mt-4 inline-flex items-center justify-center rounded-full bg-purple-600 px-6 py-3 text-sm font-medium text-white hover:bg-purple-700 transition-colors">
+            <button className="mt-4 inline-flex items-center justify-center rounded-full bg-purple-600 px-6 py-3 text-sm font-medium text-white hover:bg-purple-700 transition-colors min-h-[44px]">
               {t.nav.getStarted}
             </button>
           </nav>

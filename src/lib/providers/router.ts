@@ -141,6 +141,7 @@ export async function routeGenerate(
     const result = await selected.providerInstance.generate({
       ...options,
       ...(selected.id !== options.prompt ? { prompt: options.prompt } : {}),
+      model: selected.id,
     });
     result.model = selected.id;
     return result;
@@ -152,7 +153,10 @@ export async function routeGenerate(
     );
     for (const fallback of fallbacks) {
       try {
-        const result = await fallback.providerInstance.generate(options);
+        const result = await fallback.providerInstance.generate({
+          ...options,
+          model: fallback.id,
+        });
         result.model = fallback.id;
         return result;
       } catch (e) {

@@ -4,14 +4,18 @@ import { useState } from "react";
 import { useLanguage } from "@/components/LanguageProvider";
 import { CheckCircle, ArrowLeft, Lock, Shield, Sparkles, Zap, Crown } from "lucide-react";
 import PaymentButton from "@/components/payments/PaymentButton";
-import { PLANS } from "@/lib/stripe";
+import { PLANS, getPlansForCurrency } from "@/lib/stripe";
 
 export default function PricingPage() {
   const { t } = useLanguage();
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
+  const [currency, setCurrency] = useState<"usd" | "cny">("usd");
   const [showPayment, setShowPayment] = useState(false);
   const [paymentComplete, setPaymentComplete] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<"pro" | "business">("pro");
+
+  const currentPlans = getPlansForCurrency(currency);
+  const currencySymbol = currency === "usd" ? "$" : "¥";
 
   const handleSubscribe = (plan: "pro" | "business") => {
     setSelectedPlan(plan);
@@ -57,7 +61,7 @@ export default function PricingPage() {
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">{t.pricing.payment.total}</span>
                 <span className="text-xl font-bold text-purple-600">
-                  ${billingPeriod === "monthly" ? PLANS[selectedPlan].monthlyPrice : PLANS[selectedPlan].yearlyPrice}
+                  {currencySymbol}{billingPeriod === "monthly" ? currentPlans[selectedPlan].monthlyPrice : currentPlans[selectedPlan].yearlyPrice}
                 </span>
               </div>
             </div>
@@ -75,7 +79,7 @@ export default function PricingPage() {
   }
 
   if (showPayment) {
-    const plan = PLANS[selectedPlan];
+    const plan = currentPlans[selectedPlan];
     return (
       <div className="min-h-screen bg-gray-50 flex">
         <div className="hidden lg:block w-1/2 bg-gradient-to-br from-purple-500 via-pink-500 to-indigo-500 relative overflow-hidden">
@@ -155,10 +159,17 @@ export default function PricingPage() {
               
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">{t.pricing.payment.total}</span>
-                <span className="text-3xl font-bold text-gray-900">
-                  ${billingPeriod === "monthly" ? plan.monthlyPrice : plan.yearlyPrice}
-                  <span className="text-base font-normal text-gray-500">/{billingPeriod === "monthly" ? "mo" : "yr"}</span>
-                </span>
+                <div className="text-right">
+                  {(currentPlans[selectedPlan] as any).promotional && (
+                    <div className="text-sm text-gray-400 line-through">
+                      {currencySymbol}{billingPeriod === "monthly" ? (currentPlans[selectedPlan] as any).originalMonthlyPrice : (currentPlans[selectedPlan] as any).originalYearlyPrice}
+                    </div>
+                  )}
+                  <span className="text-3xl font-bold text-gray-900">
+                    {currencySymbol}{billingPeriod === "monthly" ? plan.monthlyPrice : plan.yearlyPrice}
+                    <span className="text-base font-normal text-gray-500">/{billingPeriod === "monthly" ? "mo" : "yr"}</span>
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -186,6 +197,7 @@ export default function PricingPage() {
               billingPeriod={billingPeriod}
               price={billingPeriod === "monthly" ? plan.monthlyPrice.toString() : plan.yearlyPrice.toString()}
               isPopular={plan.popular}
+              currency={currency}
             />
 
             <p className="text-center text-xs text-gray-500 mt-4">
@@ -199,18 +211,17 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        {/* Back Button */}
+      <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-12 lg:px-8">
         <button
           onClick={() => window.location.href = "/"}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-8 transition-colors"
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 sm:mb-8 transition-colors min-h-[44px]"
         >
           <ArrowLeft className="w-5 h-5" />
           {t.pricing.backToHome}
         </button>
 
-        <div className="text-center mb-12">
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-gray-900 mb-4">
+        <div className="text-center mb-8 sm:mb-12">
+          <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-gray-900 mb-3 sm:mb-4">
             {t?.pricing?.title || "选择您的方案"}
           </h1>
           <p className="text-xl text-gray-500 max-w-2xl mx-auto">
@@ -218,13 +229,13 @@ export default function PricingPage() {
           </p>
         </div>
 
-        <div className="flex justify-center mb-8">
-          <div className="inline-flex bg-white rounded-lg p-1 shadow-sm">
+        <div className="flex flex-col sm:flex-row justify-center mb-8 gap-3 sm:gap-4">
+          <div className="inline-flex bg-white rounded-lg p-1 shadow-sm self-center">
             <button
               onClick={() => setBillingPeriod("monthly")}
-              className={`px-6 py-2 text-sm font-medium rounded-md transition-colors ${
-                billingPeriod === "monthly" 
-                  ? "bg-purple-600 text-white shadow-sm" 
+              className={`px-4 sm:px-6 py-2 text-sm font-medium rounded-md transition-colors min-h-[44px] ${
+                billingPeriod === "monthly"
+                  ? "bg-purple-600 text-white shadow-sm"
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
@@ -232,9 +243,9 @@ export default function PricingPage() {
             </button>
             <button
               onClick={() => setBillingPeriod("yearly")}
-              className={`px-6 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-2 ${
-                billingPeriod === "yearly" 
-                  ? "bg-purple-600 text-white shadow-sm" 
+              className={`px-4 sm:px-6 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-2 min-h-[44px] ${
+                billingPeriod === "yearly"
+                  ? "bg-purple-600 text-white shadow-sm"
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
@@ -244,10 +255,32 @@ export default function PricingPage() {
               </span>
             </button>
           </div>
+          <div className="inline-flex bg-white rounded-lg p-1 shadow-sm self-center">
+            <button
+              onClick={() => setCurrency("usd")}
+              className={`px-4 sm:px-6 py-2 text-sm font-medium rounded-md transition-colors min-h-[44px] ${
+                currency === "usd"
+                  ? "bg-purple-600 text-white shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              USD $
+            </button>
+            <button
+              onClick={() => setCurrency("cny")}
+              className={`px-4 sm:px-6 py-2 text-sm font-medium rounded-md transition-colors min-h-[44px] ${
+                currency === "cny"
+                  ? "bg-purple-600 text-white shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              CNY ¥
+            </button>
+          </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          <div className="relative bg-white rounded-2xl p-8 border border-gray-200 hover:shadow-lg transition-shadow">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          <div className="relative bg-white rounded-2xl p-6 sm:p-8 border border-gray-200 hover:shadow-lg transition-shadow">
             <div className="absolute -top-3 left-8 px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
               {t.pricing.starter}
             </div>
@@ -260,7 +293,7 @@ export default function PricingPage() {
             <p className="text-sm text-gray-500 mb-4">{t.pricing.plans.free.description}</p>
             
             <div className="mb-6">
-              <span className="text-4xl font-bold text-gray-900">$0</span>
+              <span className="text-4xl font-bold text-gray-900">{currencySymbol}0</span>
               <span className="text-gray-500 ml-1">{t.pricing.freeForever}</span>
             </div>
 
@@ -274,13 +307,13 @@ export default function PricingPage() {
             </ul>
 
             <button
-              className="w-full py-3 rounded-xl font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+              className="w-full py-3 rounded-xl font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors min-h-[44px]"
             >
               {t.pricing.freeStart}
             </button>
           </div>
 
-          <div className="relative bg-gradient-to-br from-purple-600 via-purple-700 to-pink-600 rounded-2xl p-8 text-white shadow-2xl transform md:-translate-y-4 z-10">
+          <div className="relative bg-gradient-to-br from-purple-600 via-purple-700 to-pink-600 rounded-2xl p-6 sm:p-8 text-white shadow-2xl md:-translate-y-4 z-10">
             <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-yellow-400 text-purple-700 text-sm font-bold rounded-full flex items-center gap-1">
               <Zap className="w-4 h-4" />
               {t.pricing.popular}
@@ -294,13 +327,23 @@ export default function PricingPage() {
             <p className="text-sm text-white/80 mb-4">{t.pricing.plans.pro.description}</p>
             
             <div className="mb-6">
+              {currentPlans.pro.promotional && (
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm text-white/50 line-through">
+                    {currencySymbol}{billingPeriod === "monthly" ? (currentPlans.pro as any).originalMonthlyPrice : (currentPlans.pro as any).originalYearlyPrice}
+                  </span>
+                  <span className="px-2 py-0.5 text-xs bg-red-500 text-white rounded-full font-bold">
+                    -{Math.round((1 - currentPlans.pro.monthlyPrice / (currentPlans.pro as any).originalMonthlyPrice) * 100)}%
+                  </span>
+                </div>
+              )}
               <span className="text-5xl font-bold">
-                ${billingPeriod === "monthly" ? PLANS.pro.monthlyPrice : PLANS.pro.yearlyPrice}
+                {currencySymbol}{billingPeriod === "monthly" ? currentPlans.pro.monthlyPrice : currentPlans.pro.yearlyPrice}
               </span>
               <span className="text-white/70 ml-1">/{billingPeriod === "monthly" ? t.pricing.monthly : t.pricing.yearly}</span>
               {billingPeriod === "yearly" && (
                 <span className="ml-2 text-xs bg-white/20 px-2 py-1 rounded-full">
-                  {t.pricing.save} $5.99/{t.pricing.monthly}
+                  {t.pricing.save} {currencySymbol}{currency === "usd" ? ((currentPlans.pro as any).originalYearlyPrice - currentPlans.pro.yearlyPrice).toFixed(2) : ((currentPlans.pro as any).originalYearlyPrice - currentPlans.pro.yearlyPrice).toFixed(1)}/{t.pricing.monthly}
                 </span>
               )}
             </div>
@@ -316,13 +359,13 @@ export default function PricingPage() {
 
             <button
               onClick={() => handleSubscribe("pro")}
-              className="w-full py-3 rounded-xl font-semibold bg-white text-purple-600 hover:bg-gray-100 transition-colors shadow-lg"
+              className="w-full py-3 rounded-xl font-semibold bg-white text-purple-600 hover:bg-gray-100 transition-colors shadow-lg min-h-[44px]"
             >
               {t.pricing.upgradeNow}
             </button>
           </div>
 
-          <div className="relative bg-white rounded-2xl p-8 border border-gray-200 hover:shadow-lg transition-shadow">
+          <div className="relative bg-white rounded-2xl p-6 sm:p-8 border border-gray-200 hover:shadow-lg transition-shadow">
             <div className="absolute -top-3 left-8 px-3 py-1 bg-purple-100 text-purple-600 text-xs font-medium rounded-full">
               {t.pricing.enterprise}
             </div>
@@ -336,12 +379,12 @@ export default function PricingPage() {
             
             <div className="mb-6">
               <span className="text-4xl font-bold text-gray-900">
-                ${billingPeriod === "monthly" ? PLANS.business.monthlyPrice : PLANS.business.yearlyPrice}
+                {currencySymbol}{billingPeriod === "monthly" ? currentPlans.business.monthlyPrice : currentPlans.business.yearlyPrice}
               </span>
               <span className="text-gray-500 ml-1">/{billingPeriod === "monthly" ? t.pricing.monthly : t.pricing.yearly}</span>
               {billingPeriod === "yearly" && (
                 <span className="ml-2 text-xs bg-green-100 px-2 py-1 rounded-full text-green-700">
-                  {t.pricing.save} $14.89/{t.pricing.monthly}
+                  {t.pricing.save} {currencySymbol}{currency === "usd" ? "14.89" : "99.9"}/{t.pricing.monthly}
                 </span>
               )}
             </div>
@@ -357,23 +400,23 @@ export default function PricingPage() {
 
             <button
               onClick={() => handleSubscribe("business")}
-              className="w-full py-3 rounded-xl font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+              className="w-full py-3 rounded-xl font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors min-h-[44px]"
             >
               {t.pricing.contactSales}
             </button>
           </div>
         </div>
 
-        <div className="mt-16 bg-white rounded-2xl p-8 border border-gray-200">
-          <h3 className="text-xl font-bold text-gray-900 mb-8 text-center">{t.pricing.featureComparison}</h3>
+        <div className="mt-16 bg-white rounded-2xl p-4 sm:p-8 border border-gray-200">
+          <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-6 sm:mb-8 text-center">{t.pricing.featureComparison}</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-4 font-medium text-gray-600">{t.pricing.featureTable.feature}</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-600">{PLANS.free.name}</th>
-                  <th className="text-center py-3 px-4 font-medium text-purple-600">{PLANS.pro.name}</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-600">{PLANS.business.name}</th>
+                  <th className="text-center py-3 px-4 font-medium text-gray-600">{currentPlans.free.name}</th>
+                  <th className="text-center py-3 px-4 font-medium text-purple-600">{currentPlans.pro.name}</th>
+                  <th className="text-center py-3 px-4 font-medium text-gray-600">{currentPlans.business.name}</th>
                 </tr>
               </thead>
               <tbody>

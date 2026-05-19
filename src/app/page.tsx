@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import PromptInput from "@/components/generator/PromptInput";
 import StyleOptions from "@/components/generator/StyleOptions";
 import GenerateButton from "@/components/generator/GenerateButton";
 import ImageOutput from "@/components/generator/ImageOutput";
-import InspirationGallery from "@/components/gallery/InspirationGallery";
 import GenerationHistory, { HistoryItem } from "@/components/generator/GenerationHistory";
 import NegativePromptInput from "@/components/generator/NegativePromptInput";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -18,11 +18,13 @@ import Image from "next/image";
 import { Upload, X, Sparkles, Wand2, Check, Layers, DollarSign, Zap, LogIn, Infinity } from "lucide-react";
 import Link from "next/link";
 import PromptPresets from "@/components/generator/PromptPresets";
-import BatchGenerator from "@/components/generator/BatchGenerator";
 import ModelSelector from "@/components/generator/ModelSelector";
 import type { ModelType } from "@/components/generator/ModelSelector";
-import SocialProof from "@/components/social/SocialProof";
 import type { UserTier } from "@/lib/providers/router";
+
+const InspirationGallery = dynamic(() => import("@/components/gallery/InspirationGallery"), { ssr: false });
+const BatchGenerator = dynamic(() => import("@/components/generator/BatchGenerator"), { ssr: false });
+const SocialProof = dynamic(() => import("@/components/social/SocialProof"), { ssr: false });
 
 export default function HomePage() {
   const searchParams = useSearchParams();
@@ -242,15 +244,15 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-br from-white via-purple-50/30 to-white">
       <Header />
 
-      <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 mb-4">
+      <main className="mx-auto max-w-6xl px-3 py-6 sm:px-6 sm:py-12 lg:px-8">
+        <div className="text-center mb-8 sm:mb-12">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 mb-3 sm:mb-4">
             {t.hero.title}
           </h1>
-          <p className="text-xl text-gray-500 max-w-2xl mx-auto">
+          <p className="text-base sm:text-xl text-gray-500 max-w-2xl mx-auto px-2">
             {t.hero.subtitle}
           </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <div className="mt-4 sm:mt-6 flex flex-wrap justify-center gap-2 sm:gap-3">
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
               <DollarSign className="w-3.5 h-3.5" />
               {t.homePage.hundredPercentFree}
@@ -273,9 +275,9 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-12">
+        <div className="grid lg:grid-cols-2 gap-6 sm:gap-12">
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
               {/* Reference Image Upload */}
               <input
                 ref={fileInputRef}
@@ -286,9 +288,8 @@ export default function HomePage() {
                 id="reference-upload"
               />
 
-              <div className="flex gap-3 mb-4">
-                {/* Reference Image Area */}
-                <div className="relative w-20 h-20 flex-shrink-0">
+              <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                <div className="relative w-full sm:w-20 h-16 sm:h-20 flex-shrink-0">
                   {referenceImage ? (
                     <div className="relative w-full h-full rounded-xl overflow-hidden border-2 border-purple-500 bg-purple-50">
                       <Image
@@ -310,10 +311,10 @@ export default function HomePage() {
                   ) : (
                     <label
                       htmlFor="reference-upload"
-                      className="flex flex-col items-center justify-center w-full h-full border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-all group"
+                      className="flex flex-row sm:flex-col items-center justify-center w-full h-full border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-all group"
                     >
-                      <Upload className="w-6 h-6 text-gray-400 group-hover:text-purple-500" />
-                      <span className="text-xs text-gray-500 mt-1">{t.homePage.uploadReference}</span>
+                      <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400 group-hover:text-purple-500" />
+                      <span className="text-xs text-gray-500 sm:mt-1 ml-2 sm:ml-0">{t.homePage.uploadReference}</span>
                     </label>
                   )}
                 </div>
@@ -343,15 +344,14 @@ export default function HomePage() {
               </div>
 
               {/* Quick Settings Bar */}
-              <div className="flex flex-wrap items-center gap-2 mb-4 pb-4 border-b border-gray-100">
-                {/* Aspect Ratios */}
-                <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-2 mb-4 pb-4 border-b border-gray-100 overflow-x-auto -mx-1 px-1">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   <span className="text-xs text-gray-400 mr-1">{t.homePage.ratio}</span>
                   {ASPECT_RATIOS.map((ratio) => (
                     <button
                       key={ratio.label}
                       onClick={() => setAspectRatio(ratio)}
-                      className={`px-3 py-1.5 rounded-lg text-xs transition-all ${
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs transition-all min-h-[32px] ${
                         aspectRatio.label === ratio.label
                           ? "bg-purple-100 text-purple-700 font-medium"
                           : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
@@ -362,10 +362,9 @@ export default function HomePage() {
                   ))}
                 </div>
 
-                <span className="text-gray-300">|</span>
+                <span className="text-gray-300 hidden sm:inline">|</span>
 
-                {/* Quick Styles */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   <span className="text-xs text-gray-400 mr-1">{t.homePage.styleLabel || "Style"}</span>
                   {[
                     { id: "none", label: t.homePage.styleNone },
@@ -377,7 +376,7 @@ export default function HomePage() {
                     <button
                       key={style.id}
                       onClick={() => setSelectedStyle(style.id)}
-                      className={`px-3 py-1.5 rounded-lg text-xs transition-all ${
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs transition-all min-h-[32px] ${
                         selectedStyle === style.id
                           ? "bg-purple-100 text-purple-700 font-medium"
                           : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
@@ -394,7 +393,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setShowStyleOptions(!showStyleOptions)}
-                  className="text-sm font-medium text-purple-600 hover:text-purple-700 flex items-center gap-1"
+                  className="text-sm font-medium text-purple-600 hover:text-purple-700 flex items-center gap-1 min-h-[44px]"
                 >
                   {showStyleOptions ? t.style.hide : t.style.show}
                   <span className="text-xs text-gray-400">{t.advancedOptions}</span>
@@ -403,7 +402,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => setPrompt("")}
-                    className="text-sm text-gray-500 hover:text-gray-700"
+                    className="text-sm text-gray-500 hover:text-gray-700 min-h-[44px] flex items-center"
                   >
                     {t.clear}
                   </button>
@@ -465,7 +464,7 @@ export default function HomePage() {
                 <button
                   onClick={() => setShowBatchGenerator(true)}
                   disabled={!prompt.trim() || isLoading}
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-purple-200 text-purple-600 hover:bg-purple-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-purple-200 text-purple-600 hover:bg-purple-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
                 >
                   <Layers className="w-4 h-4" />
                   <span className="font-medium">{t.batchGenerate} {t.batchSelect}</span>
@@ -479,7 +478,7 @@ export default function HomePage() {
               </p>
 
               {quotaInfo && (
-                <div className="mt-3 flex items-center justify-center gap-4">
+                <div className="mt-3 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
                     {t.homePage.todayQuota} {quotaInfo.dailyUsed}/{quotaInfo.dailyLimit} {t.homePage.generations}
                   </span>
@@ -512,13 +511,13 @@ export default function HomePage() {
               {t.homePage.transformPhotos}
             </p>
           </div>
-          <div className="grid sm:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
             <Link href="/effects/chibi" className="group">
               <div className="bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 hover:border-purple-500 transition-all hover:shadow-lg hover:shadow-purple-500/20">
-                <div className="h-48 flex items-center justify-center bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-500">
+                <div className="h-36 sm:h-48 flex items-center justify-center bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-500">
                   <span className="text-white text-lg font-bold">Chibi</span>
                 </div>
-                <div className="p-5">
+                <div className="p-4 sm:p-5">
                   <h3 className="font-semibold text-white mb-1">{t.effects.chibi}</h3>
                   <p className="text-sm text-gray-400 mb-3">{t.effects.chibiDesc}</p>
                   <span className="inline-flex items-center gap-1 text-sm font-medium text-purple-400 group-hover:text-purple-300 transition-colors">
@@ -530,10 +529,10 @@ export default function HomePage() {
             </Link>
             <Link href="/effects/caricature" className="group">
               <div className="bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 hover:border-purple-500 transition-all hover:shadow-lg hover:shadow-purple-500/20">
-                <div className="h-48 flex items-center justify-center bg-gradient-to-br from-yellow-500 via-orange-500 to-red-500">
+                <div className="h-36 sm:h-48 flex items-center justify-center bg-gradient-to-br from-yellow-500 via-orange-500 to-red-500">
                   <span className="text-white text-lg font-bold">Caricature</span>
                 </div>
-                <div className="p-5">
+                <div className="p-4 sm:p-5">
                   <h3 className="font-semibold text-white mb-1">{t.effects.caricature}</h3>
                   <p className="text-sm text-gray-400 mb-3">{t.effects.caricatureDesc}</p>
                   <span className="inline-flex items-center gap-1 text-sm font-medium text-purple-400 group-hover:text-purple-300 transition-colors">
@@ -545,10 +544,10 @@ export default function HomePage() {
             </Link>
             <Link href="/effects/retro-film" className="group">
               <div className="bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 hover:border-purple-500 transition-all hover:shadow-lg hover:shadow-purple-500/20">
-                <div className="h-48 flex items-center justify-center bg-gradient-to-br from-amber-600 via-yellow-700 to-stone-800">
+                <div className="h-36 sm:h-48 flex items-center justify-center bg-gradient-to-br from-amber-600 via-yellow-700 to-stone-800">
                   <span className="text-white text-lg font-bold">Retro Film</span>
                 </div>
-                <div className="p-5">
+                <div className="p-4 sm:p-5">
                   <h3 className="font-semibold text-white mb-1">{t.effects.retroFilm}</h3>
                   <p className="text-sm text-gray-400 mb-3">{t.effects.retroFilmDesc}</p>
                   <span className="inline-flex items-center gap-1 text-sm font-medium text-purple-400 group-hover:text-purple-300 transition-colors">
@@ -563,7 +562,7 @@ export default function HomePage() {
 
         {/* Inspiration Gallery */}
         <div className="mt-12">
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6">
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-3 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-purple-500" />
@@ -636,8 +635,8 @@ export default function HomePage() {
         </div>
 
         {/* CTA */}
-        <div className="mt-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-8 text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
+        <div className="mt-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-6 sm:p-8 text-center">
+          <h2 className="text-xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">
             {t.cta.title}
           </h2>
           <p className="text-purple-100 mb-6 max-w-2xl mx-auto">
@@ -645,7 +644,7 @@ export default function HomePage() {
           </p>
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-white text-gray-900 font-semibold rounded-xl hover:bg-gray-100 transition-colors shadow-lg"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-white text-gray-900 font-semibold rounded-xl hover:bg-gray-100 transition-colors shadow-lg min-h-[44px]"
           >
             <Sparkles className="w-5 h-5" />
             {t.cta.button}

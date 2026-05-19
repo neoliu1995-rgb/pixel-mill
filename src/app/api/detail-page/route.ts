@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SiliconFlowTextProvider } from "@/lib/providers/siliconflow";
+import { getCurrentUser } from "@/lib/auth";
 
 interface DetailPageRequest {
   productName: string;
@@ -176,14 +177,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await getCurrentUser(req);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     const {
       productName,
       productImageUrl,
       category,
       sellingPoints = [],
       style = "professional",
-      userTier = "free",
+      userTier: requestUserTier,
     }: DetailPageRequest = await req.json();
+
+    const userTier = requestUserTier || (user.plan as "free" | "pro" | "business");
 
     if (!productName || typeof productName !== "string") {
       return NextResponse.json(
@@ -197,10 +208,6 @@ export async function POST(req: NextRequest) {
         { success: false, error: "品类为必填项" },
         { status: 400 }
       );
-    }
-
-    if (userTier === "free") {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
     }
 
     const textProvider = new SiliconFlowTextProvider();

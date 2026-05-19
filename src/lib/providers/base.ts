@@ -13,6 +13,7 @@ export interface ProviderGenerateOptions {
   negativePrompt?: string;
   image?: string;
   seed?: number;
+  model?: string;
 }
 
 export interface ProviderEditOptions {

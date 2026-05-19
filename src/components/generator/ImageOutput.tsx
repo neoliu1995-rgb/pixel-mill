@@ -121,7 +121,7 @@ export default function ImageOutput({ imageUrl, isLoading, progress = 0, progres
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border border-purple-100">
+      <div className="flex flex-col items-center justify-center min-h-[280px] sm:min-h-[400px] bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border border-purple-100">
         <div className="relative mb-6">
           <div className="w-20 h-20 border-4 border-purple-200 rounded-full flex items-center justify-center">
             <Loader2 className="h-10 w-10 text-purple-600 animate-spin" />
@@ -145,7 +145,7 @@ export default function ImageOutput({ imageUrl, isLoading, progress = 0, progres
 
   if (!imageUrl) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl border-2 border-dashed border-gray-200">
+      <div className="flex flex-col items-center justify-center min-h-[280px] sm:min-h-[400px] bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl border-2 border-dashed border-gray-200">
         <div className="text-center">
           <div className="w-24 h-24 mx-auto mb-4 bg-white rounded-full flex items-center justify-center shadow-lg">
             <span className="text-5xl">🎨</span>
@@ -159,7 +159,7 @@ export default function ImageOutput({ imageUrl, isLoading, progress = 0, progres
 
   if (imageError) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] bg-red-50 rounded-2xl border-2 border-dashed border-red-200">
+      <div className="flex flex-col items-center justify-center min-h-[280px] sm:min-h-[400px] bg-red-50 rounded-2xl border-2 border-dashed border-red-200">
         <div className="text-center">
           <div className="w-24 h-24 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
             <span className="text-4xl">❌</span>
@@ -196,7 +196,7 @@ export default function ImageOutput({ imageUrl, isLoading, progress = 0, progres
           )}
           onLoad={() => setImageLoaded(true)}
           onError={() => setImageError(true)}
-          style={{ minHeight: "400px", objectFit: "contain", maxHeight: "600px" }}
+          style={{ minHeight: "280px", objectFit: "contain", maxHeight: "600px" }}
         />
         {imageLoaded && (
           <div className="absolute top-4 right-4 px-3 py-1 bg-black/50 text-white text-xs rounded-full">
@@ -215,7 +215,7 @@ export default function ImageOutput({ imageUrl, isLoading, progress = 0, progres
             onClick={handleEdit}
             className={cn(
               "flex items-center justify-center gap-2 py-2 px-4 rounded-xl",
-              "border border-purple-200 text-purple-700 hover:bg-purple-50 transition-colors"
+              "border border-purple-200 text-purple-700 hover:bg-purple-50 transition-colors min-h-[44px]"
             )}
             title="编辑图片"
           >
@@ -226,7 +226,7 @@ export default function ImageOutput({ imageUrl, isLoading, progress = 0, progres
             onClick={onReset}
             className={cn(
               "flex items-center justify-center gap-2 py-2 px-4 rounded-xl",
-              "border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+              "border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors min-h-[44px]"
             )}
             title="Generate again"
           >
@@ -241,7 +241,7 @@ export default function ImageOutput({ imageUrl, isLoading, progress = 0, progres
               className={cn(
                 "w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl",
                 "bg-gradient-to-r from-gray-900 to-gray-800 text-white hover:from-gray-800 hover:to-gray-700 transition-all",
-                "font-medium shadow-md hover:shadow-lg"
+                "font-medium shadow-md hover:shadow-lg min-h-[44px]"
               )}
             >
               <Download className="h-4 w-4" />
@@ -296,7 +296,7 @@ export default function ImageOutput({ imageUrl, isLoading, progress = 0, progres
             className={cn(
               "flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl",
               "bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors",
-              "font-medium"
+              "font-medium min-h-[44px]"
             )}
           >
             <Share2 className="h-4 w-4" />

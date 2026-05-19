@@ -15,6 +15,7 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/LanguageProvider";
 
 interface Subscription {
   id: string;
@@ -40,6 +41,7 @@ export default function SubscriptionPage() {
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useLanguage();
 
   useEffect(() => {
     fetchSubscription();
@@ -57,7 +59,7 @@ export default function SubscriptionPage() {
       }
       setError(null);
     } catch (err) {
-      setError("Failed to fetch subscription");
+      setError(t.dashboard.subscription.failedToFetch);
       setSubscription(null);
     } finally {
       setLoading(false);
@@ -75,10 +77,10 @@ export default function SubscriptionPage() {
         setSubscription({ ...subscription!, status: "canceled" });
         setCancelConfirm(false);
       } else {
-        setError(data.error || "Failed to cancel subscription");
+        setError(data.error || t.dashboard.subscription.failedToCancel);
       }
     } catch (err) {
-      setError("Failed to cancel subscription");
+      setError(t.dashboard.subscription.failedToCancel);
     } finally {
       setIsCanceling(false);
     }
@@ -95,10 +97,10 @@ export default function SubscriptionPage() {
       if (data.url) {
         window.location.href = data.url;
       } else {
-        setError(data.error || "Failed to switch plan");
+        setError(data.error || t.dashboard.subscription.failedToSwitch);
       }
     } catch (err) {
-      setError("Failed to switch plan");
+      setError(t.dashboard.subscription.failedToSwitch);
     }
   };
 
@@ -120,7 +122,7 @@ export default function SubscriptionPage() {
             className="mt-2 flex items-center gap-1 text-blue-600 hover:text-blue-800"
           >
             <RefreshCw className="w-4 h-4" />
-            <span>Retry</span>
+            <span>{t.dashboard.subscription.retry}</span>
           </button>
         </div>
       </div>
@@ -130,21 +132,21 @@ export default function SubscriptionPage() {
   return (
     <div className="max-w-3xl mx-auto p-6">
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Subscription Management</h1>
-        <p className="text-gray-500 mt-2">Manage your subscription plan and billing</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t.dashboard.subscription.title}</h1>
+        <p className="text-gray-500 mt-2">{t.dashboard.subscription.subtitle}</p>
       </div>
 
       {!subscription ? (
         <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-8 text-center">
           <Sparkles className="w-16 h-16 text-purple-600 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">No Active Subscription</h2>
-          <p className="text-gray-500 mb-6">Upgrade to Pro for unlimited generations and premium features</p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">{t.dashboard.subscription.noSubscription}</h2>
+          <p className="text-gray-500 mb-6">{t.dashboard.subscription.noSubscriptionDesc}</p>
           <a
             href="/pricing"
             className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition-all"
           >
             <Zap className="w-5 h-5" />
-            Upgrade to Pro
+            {t.dashboard.subscription.upgradeToPro}
           </a>
         </div>
       ) : (
@@ -156,8 +158,8 @@ export default function SubscriptionPage() {
                   <CreditCard className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Current Plan</h2>
-                  <p className="text-gray-500">Pro {subscription.interval === "month" ? "Monthly" : "Yearly"}</p>
+                  <h2 className="text-lg font-semibold text-gray-900">{t.dashboard.subscription.currentPlan}</h2>
+                  <p className="text-gray-500">Pro {subscription.interval === "month" ? t.dashboard.subscription.monthly : t.dashboard.subscription.yearly}</p>
                 </div>
               </div>
               <span
@@ -170,19 +172,19 @@ export default function SubscriptionPage() {
                     : "bg-yellow-100 text-yellow-700"
                 )}
               >
-                {subscription.status === "active" ? "Active" : subscription.status === "canceled" ? "Canceled" : "Past Due"}
+                {subscription.status === "active" ? t.dashboard.subscription.active : subscription.status === "canceled" ? t.dashboard.subscription.canceled : t.dashboard.subscription.pastDue}
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-sm text-gray-500 mb-1">Current Price</p>
+                <p className="text-sm text-gray-500 mb-1">{t.dashboard.subscription.currentPrice}</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  ${subscription.price}/{subscription.interval === "month" ? "mo" : "yr"}
+                  ${subscription.price}/{subscription.interval === "month" ? t.dashboard.subscription.mo : t.dashboard.subscription.yr}
                 </p>
               </div>
               <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-sm text-gray-500 mb-1">Next Billing Date</p>
+                <p className="text-sm text-gray-500 mb-1">{t.dashboard.subscription.nextBillingDate}</p>
                 <p className="text-lg font-semibold text-gray-900">
                   {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
                 </p>
@@ -190,7 +192,7 @@ export default function SubscriptionPage() {
             </div>
 
             <div className="flex flex-wrap gap-2 mb-6">
-              {["Unlimited Generations", "HD Resolution", "All AI Models", "Priority Processing", "Commercial License"].map((feature, index) => (
+              {t.dashboard.subscription.features.map((feature: string, index: number) => (
                 <span key={index} className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm">
                   <Check className="w-4 h-4" />
                   {feature}
@@ -203,14 +205,14 @@ export default function SubscriptionPage() {
                 onClick={() => handleSwitchPlan(subscription.interval === "month" ? "yearly" : "monthly")}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
               >
-                Switch to {subscription.interval === "month" ? "Yearly" : "Monthly"}
+                {t.dashboard.subscription.switchTo} {subscription.interval === "month" ? t.dashboard.subscription.yearly : t.dashboard.subscription.monthly}
               </button>
               {subscription.status === "active" && (
                 <button
                   onClick={() => setCancelConfirm(true)}
                   className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
                 >
-                  Cancel Subscription
+                  {t.dashboard.subscription.cancelSubscription}
                 </button>
               )}
             </div>
@@ -223,8 +225,8 @@ export default function SubscriptionPage() {
                   <FileText className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Invoices</h2>
-                  <p className="text-gray-500">View and download your billing history</p>
+                  <h2 className="text-lg font-semibold text-gray-900">{t.dashboard.subscription.invoices}</h2>
+                  <p className="text-gray-500">{t.dashboard.subscription.invoiceDesc}</p>
                 </div>
               </div>
             </div>
@@ -233,7 +235,7 @@ export default function SubscriptionPage() {
               {subscription.invoices.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>No invoices yet</p>
+                  <p>{t.dashboard.subscription.noInvoices}</p>
                 </div>
               ) : (
                 subscription.invoices.map((invoice) => (
@@ -259,7 +261,7 @@ export default function SubscriptionPage() {
                         )}
                       </span>
                       <div>
-                        <p className="font-medium text-gray-900">Invoice #{invoice.id.slice(-8)}</p>
+                        <p className="font-medium text-gray-900">{t.dashboard.subscription.invoice} #{invoice.id.slice(-8)}</p>
                         <p className="text-sm text-gray-500">{new Date(invoice.date).toLocaleDateString()}</p>
                       </div>
                     </div>
@@ -270,7 +272,7 @@ export default function SubscriptionPage() {
                           href={invoice.pdfUrl}
                           className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm"
                         >
-                          Download <ChevronRight className="w-4 h-4" />
+                          {t.dashboard.subscription.download} <ChevronRight className="w-4 h-4" />
                         </a>
                       )}
                     </div>
@@ -290,14 +292,14 @@ export default function SubscriptionPage() {
                 <AlertTriangle className="w-6 h-6 text-red-600" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Confirm Cancellation</h3>
-                <p className="text-gray-500 text-sm">Are you sure you want to cancel?</p>
+                <h3 className="text-lg font-semibold text-gray-900">{t.dashboard.subscription.confirmCancellation}</h3>
+                <p className="text-gray-500 text-sm">{t.dashboard.subscription.areYouSure}</p>
               </div>
             </div>
 
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
               <p className="text-yellow-800 text-sm">
-                Your subscription will remain active until {new Date(subscription?.currentPeriodEnd || Date.now()).toLocaleDateString()}.
+                {t.dashboard.subscription.remainActive} {new Date(subscription?.currentPeriodEnd || Date.now()).toLocaleDateString()}.
               </p>
             </div>
 
@@ -307,7 +309,7 @@ export default function SubscriptionPage() {
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 <X className="w-4 h-4 inline mr-2" />
-                Cancel
+                {t.dashboard.subscription.cancelAction}
               </button>
               <button
                 onClick={handleCancelSubscription}
@@ -319,7 +321,7 @@ export default function SubscriptionPage() {
                 ) : (
                   <AlertTriangle className="w-4 h-4 inline mr-2" />
                 )}
-                Confirm Cancellation
+                {t.dashboard.subscription.confirmCancel}
               </button>
             </div>
           </div>

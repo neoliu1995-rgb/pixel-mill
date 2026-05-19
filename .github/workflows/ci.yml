@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint-and-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - run: npx next lint
+      - run: npx tsc --noEmit
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - run: npx vitest run
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - run: npx next build
+        env:
+          JWT_SECRET: ci-test-secret
+          DATABASE_URL: file:./test.db
+          STRIPE_SECRET_KEY: sk_test_ci_dummy_key
+          STRIPE_PRO_MONTHLY_PRICE_ID: price_ci_dummy
+          STRIPE_PRO_YEARLY_PRICE_ID: price_ci_dummy
+          STRIPE_BUSINESS_MONTHLY_PRICE_ID: price_ci_dummy
+          STRIPE_BUSINESS_YEARLY_PRICE_ID: price_ci_dummy
+          STRIPE_WEBHOOK_SECRET: whsec_ci_dummy
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          ALIPAY_APP_ID: ci_dummy
+          ALIPAY_PRIVATE_KEY: ci_dummy
+          ALIPAY_PUBLIC_KEY: ci_dummy
+          ALIPAY_NOTIFY_URL: http://localhost:3000/api/webhook/alipay
+          ALIPAY_RETURN_URL: http://localhost:3000/dashboard
+          WECHAT_APP_ID: ci_dummy
+          WECHAT_MCH_ID: ci_dummy
+          WECHAT_API_KEY: ci_dummy
+          WECHAT_NOTIFY_URL: http://localhost:3000/api/webhook/wechat
+          SILICONFLOW_API_KEY: ci_dummy
+          ALIBAILIAN_API_KEY: ci_dummy
+          GEMINI_API_KEY: ci_dummy
+          REMOVE_BG_API_KEY: ci_dummy
+          NEXT_PUBLIC_ADSENSE_CLIENT: ca-pub-ci-dummy
+          NEXT_PUBLIC_ADSENSE_SLOT: ci_dummy
+          NEXT_PUBLIC_ADSENSE_SLOT_ARTICLE: ci_dummy

@@ -22,10 +22,13 @@ export async function POST(request: Request) {
     const priceId = plan === "yearly" ? PRICES.proYearly : PRICES.proMonthly;
 
     if (subscriptionId) {
+      const existingSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const itemId = existingSubscription.items.data[0].id;
+
       const subscription = await stripe.subscriptions.update(subscriptionId, {
         items: [
           {
-            id: subscriptionId,
+            id: itemId,
             price: priceId,
           },
         ],
