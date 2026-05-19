@@ -7,9 +7,10 @@ import { authenticateApiKey } from "@/lib/apikey";
 import { uploadImage } from "@/lib/storage";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { rateLimiter } from "@/lib/rate-limiter";
 
 export type ModelType = "flux-schnell" | "flux-dev" | "sdxl" | "turbo" | "realistic" | "anime" | "auto"
-  | "black-forest-labs/FLUX.2-pro" | "black-forest-labs/FLUX.2-flex" | "Zhihu-ai/Z-Image-Turbo"
+  | "black-forest-labs/FLUX.2-pro" | "black-forest-labs/FLUX.2-flex" | "Zhihub-ai/Z-Image-Turbo"
   | "wanx2.6-t2i" | "wanx2.1-t2i-turbo";
 
 export interface GenerationRequest {
@@ -38,6 +39,10 @@ export interface GenerationResponse {
   cost: number;
 }
 
+function getAnonId(ip: string): string {
+  return `anon:${ip}`;
+}
+
 export async function GET(req: NextRequest) {
   const tier = (req.nextUrl.searchParams.get("tier") as "free" | "pro" | "business") || "free";
   const models = getAvailableModels(tier);
@@ -58,6 +63,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const forwarded = req.headers.get("x-forwarded-for");
+    const ip = forwarded ? forwarded.split(",")[0].trim() : "unknown";
+
     let user: AuthUser | null = await getCurrentUser(req);
 
     if (!user) {
@@ -78,11 +86,37 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (!user) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+    const isAnonymous = !user;
+    let userId: string;
+    let userTier: "free" | "pro" | "business";
+
+    if (isAnonymous) {
+      const ipRateLimit = rateLimiter.check(`gen:${ip}`, 10, 60_000);
+      if (!ipRateLimit.allowed) {
+        return NextResponse.json(
+          { error: "Too many requests. Please sign in for more generations.", needAuth: true },
+          { status: 429 }
+        );
+      }
+
+      const dailyRateLimit = rateLimiter.check(`gen-daily:${ip}`, 10, 86_400_000);
+      if (!dailyRateLimit.allowed) {
+        return NextResponse.json(
+          {
+            error: "Daily free limit reached. Sign in to get more generations!",
+            quotaExceeded: true,
+            quotaType: "daily",
+            needAuth: true,
+          },
+          { status: 429 }
+        );
+      }
+
+      userId = getAnonId(ip);
+      userTier = "free";
+    } else {
+      userId = user!.id;
+      userTier = "free";
     }
 
     const startTime = Date.now();
@@ -101,7 +135,9 @@ export async function POST(req: NextRequest) {
       composition,
     }: GenerationRequest = await req.json();
 
-    const userTier = requestUserTier || (user.plan as "free" | "pro" | "business");
+    if (requestUserTier && !isAnonymous) {
+      userTier = requestUserTier;
+    }
 
     console.log(`[${new Date().toISOString()}] Generation request:`, {
       promptLength: prompt?.length || 0,
@@ -109,6 +145,7 @@ export async function POST(req: NextRequest) {
       model,
       hasImage: !!image,
       userTier,
+      isAnonymous,
       style: style || "none",
     });
 
@@ -141,48 +178,53 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const userId = user.id;
-    const dailyUsage = await getUsage(userId, "dailyGenerations");
-    const monthlyUsage = await getUsage(userId, "monthlyGenerations");
+    if (!isAnonymous) {
+      const dailyUsage = await getUsage(userId, "dailyGenerations");
+      const monthlyUsage = await getUsage(userId, "monthlyGenerations");
 
-    const dailyCheck = checkQuota(userTier, "dailyGenerations", dailyUsage);
-    const monthlyCheck = checkQuota(userTier, "monthlyGenerations", monthlyUsage);
+      const dailyCheck = checkQuota(userTier, "dailyGenerations", dailyUsage);
+      const monthlyCheck = checkQuota(userTier, "monthlyGenerations", monthlyUsage);
 
-    if (!dailyCheck.allowed) {
-      const config = QUOTA_LIMITS[userTier] || QUOTA_LIMITS.free;
-      return NextResponse.json(
-        {
-          error: `今日生成次数已达上限（${config.dailyGenerations}次），请明天再试或升级套餐`,
-          quotaExceeded: true,
-          quotaType: "daily",
-        },
-        {
-          status: 429,
-          headers: {
-            "X-RateLimit-Limit": String(config.dailyGenerations),
-            "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Reset": "tomorrow",
+      if (!dailyCheck.allowed) {
+        const config = QUOTA_LIMITS[userTier] || QUOTA_LIMITS.free;
+        return NextResponse.json(
+          {
+            error: `今日生成次数已达上限（${config.dailyGenerations}次），请明天再试或升级套餐`,
+            quotaExceeded: true,
+            quotaType: "daily",
           },
-        }
-      );
+          {
+            status: 429,
+            headers: {
+              "X-RateLimit-Limit": String(config.dailyGenerations),
+              "X-RateLimit-Remaining": "0",
+              "X-RateLimit-Reset": "tomorrow",
+            },
+          }
+        );
+      }
+
+      if (!monthlyCheck.allowed) {
+        const config = QUOTA_LIMITS[userTier] || QUOTA_LIMITS.free;
+        return NextResponse.json(
+          {
+            error: `本月生成次数已达上限（${config.monthlyGenerations}次），请升级套餐获取更多次数`,
+            quotaExceeded: true,
+            quotaType: "monthly",
+          },
+          {
+            status: 429,
+            headers: {
+              "X-RateLimit-Limit": String(config.monthlyGenerations),
+              "X-RateLimit-Remaining": "0",
+            },
+          }
+        );
+      }
     }
 
-    if (!monthlyCheck.allowed) {
-      const config = QUOTA_LIMITS[userTier] || QUOTA_LIMITS.free;
-      return NextResponse.json(
-        {
-          error: `本月生成次数已达上限（${config.monthlyGenerations}次），请升级套餐获取更多次数`,
-          quotaExceeded: true,
-          quotaType: "monthly",
-        },
-        {
-          status: 429,
-          headers: {
-            "X-RateLimit-Limit": String(config.monthlyGenerations),
-            "X-RateLimit-Remaining": "0",
-          },
-        }
-      );
+    if (userTier === "free") {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
     }
 
     const result: GenerationResult = await generateImage(
@@ -211,10 +253,12 @@ export async function POST(req: NextRequest) {
       logger.error("R2 upload error:", { error: uploadError });
     }
 
-    console.log(`Generation successful! Provider: ${result.provider}, Model: ${result.model}, Latency: ${totalLatency}ms, Cost: ${result.cost}, R2: ${r2Url ? "yes" : "no"}`);
+    console.log(`Generation successful! Provider: ${result.provider}, Model: ${result.model}, Latency: ${totalLatency}ms, Cost: ${result.cost}, R2: ${r2Url ? "yes" : "no"}, Anonymous: ${isAnonymous}`);
 
-    await incrementUsage(userId, "dailyGenerations");
-    await incrementUsage(userId, "monthlyGenerations");
+    if (!isAnonymous) {
+      await incrementUsage(userId, "dailyGenerations");
+      await incrementUsage(userId, "monthlyGenerations");
+    }
 
     try {
       await prisma.generationHistory.create({
@@ -229,9 +273,16 @@ export async function POST(req: NextRequest) {
       console.error("Failed to save generation history:", historyError);
     }
 
-    const updatedDailyUsage = await getUsage(userId, "dailyGenerations");
-    const updatedMonthlyUsage = await getUsage(userId, "monthlyGenerations");
     const config = QUOTA_LIMITS[userTier] || QUOTA_LIMITS.free;
+    let dailyRemaining = config.dailyGenerations;
+    let monthlyRemaining = config.monthlyGenerations;
+
+    if (!isAnonymous) {
+      const updatedDailyUsage = await getUsage(userId, "dailyGenerations");
+      const updatedMonthlyUsage = await getUsage(userId, "monthlyGenerations");
+      dailyRemaining = Math.max(0, config.dailyGenerations - updatedDailyUsage);
+      monthlyRemaining = Math.max(0, config.monthlyGenerations - updatedMonthlyUsage);
+    }
 
     return NextResponse.json<GenerationResponse>({
       imageUrl: finalImageUrl,
@@ -246,9 +297,9 @@ export async function POST(req: NextRequest) {
     }, {
       headers: {
         "X-RateLimit-Limit-Daily": String(config.dailyGenerations),
-        "X-RateLimit-Remaining-Daily": String(Math.max(0, config.dailyGenerations - updatedDailyUsage)),
+        "X-RateLimit-Remaining-Daily": String(dailyRemaining),
         "X-RateLimit-Limit-Monthly": String(config.monthlyGenerations),
-        "X-RateLimit-Remaining-Monthly": String(Math.max(0, config.monthlyGenerations - updatedMonthlyUsage)),
+        "X-RateLimit-Remaining-Monthly": String(monthlyRemaining),
         "Cache-Control": "public, max-age=86400",
       },
     });

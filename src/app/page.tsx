@@ -180,6 +180,9 @@ export default function HomePage() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (response.status === 429 && errorData.needAuth) {
+          throw new Error("FREE_LIMIT_REACHED");
+        }
         if (response.status === 429) {
           throw new Error(errorData.error || "生成次数已达上限");
         }
@@ -214,7 +217,11 @@ export default function HomePage() {
       }
     } catch (error) {
       console.error("Generation failed:", error);
-      setError(t.error.generation || "生成图片失败，请重试。");
+      if (error instanceof Error && error.message === "FREE_LIMIT_REACHED") {
+        setError("DAILY_LIMIT_SIGNIN");
+      } else {
+        setError(t.error.generation || "生成图片失败，请重试。");
+      }
     } finally {
       setIsLoading(false);
       setGenerationProgress(100);
@@ -448,7 +455,20 @@ export default function HomePage() {
               {/* Error Message */}
               {error && (
                 <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-600">{error}</p>
+                  {error === "DAILY_LIMIT_SIGNIN" ? (
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-red-600">免费体验次数已用完，登录获取更多次数！</p>
+                      <Link
+                        href="/auth/signin"
+                        className="ml-3 px-3 py-1 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors whitespace-nowrap"
+                      >
+                        <LogIn className="w-3 h-3 inline mr-1" />
+                        登录
+                      </Link>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-red-600">{error}</p>
+                  )}
                 </div>
               )}
 
@@ -473,7 +493,9 @@ export default function HomePage() {
 
               <p className="mt-4 text-center text-xs text-gray-400">
                 {isLoading 
-                  ? `${t.homePage.generatingProgress} ${Math.round(generationProgress)}%` 
+                  ? (userTier === "free" 
+                    ? `🎨 ${t.homePage.generatingProgress} ${Math.round(generationProgress)}% — 免费用户排队中，升级套餐享优先生成` 
+                    : `${t.homePage.generatingProgress} ${Math.round(generationProgress)}%`)
                   : t.homePage.freeGenerationNote}
               </p>
 
