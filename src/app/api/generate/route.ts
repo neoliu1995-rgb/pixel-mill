@@ -306,9 +306,11 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error("Generation error:", { error });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : "";
+    logger.error("Generation error:", { error: errorMessage, stack: errorStack });
     return NextResponse.json(
-      { error: "生成图片失败，请重试。" },
+      { error: `生成图片失败: ${errorMessage}` },
       { status: 500 }
     );
   }
