@@ -229,10 +229,14 @@ export async function POST(req: NextRequest) {
       await new Promise((resolve) => setTimeout(resolve, 2000));
     }
 
+    logger.info("About to call generateImage", { prompt: prompt?.substring(0, 50), width, height, model, userTier });
+
     const result: GenerationResult = await generateImage(
       { prompt, width, height, model, image, negativePrompt, style, color, lighting, composition },
       userTier
     );
+
+    logger.info("generateImage completed", { provider: result.provider, model: result.model });
 
     const totalLatency = Date.now() - startTime;
 
