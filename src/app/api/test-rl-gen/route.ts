@@ -5,25 +5,28 @@ import { generateImage } from "@/lib/imageGenerator";
 export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
-  const results = { steps: [] as string[] };
-  const log = (s: string, ok: boolean, d?: string) => { results.steps.push(`${ok?"✅":"❌"} ${s}${d?`: ${d}`:""}"); };
+  const results = { steps: [] as string[], errors: [] as string[] };
 
   try {
-    log("1. Rate limit check", true);
+    results.steps.push("[OK] Step 1: Rate limit check");
     try {
       const rl = await rateLimiter.check("test-main-flow", 10, 60000);
-      log("1.1 RL result", rl.allowed, JSON.stringify(rl));
+      results.steps.push("[OK] Step 1.1: RL allowed=" + rl.allowed);
     } catch (e) {
-      log("1.1 RL FAILED", false, e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      results.steps.push("[FAIL] Step 1.1: " + msg);
+      results.errors.push(msg);
     }
 
-    log("2. Generate image", true);
+    results.steps.push("[OK] Step 2: Generate image");
     const result = await generateImage({ prompt: "a cute cat", width: 256, height: 256 }, "free");
-    log("2.1 Generated", true, `${result.provider}/${result.model}`);
+    results.steps.push("[OK] Step 2.1: " + result.provider + "/" + result.model);
 
     return NextResponse.json({ success: true, ...results });
   } catch (error) {
-    log("FATAL", false, error instanceof Error ? error.message : String(error));
+    const msg = error instanceof Error ? error.message : String(error);
+    results.steps.push("[FAIL] FATAL: " + msg);
+    results.errors.push(msg);
     return NextResponse.json({ success: false, ...results }, { status: 500 });
   }
 }
