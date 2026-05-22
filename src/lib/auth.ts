@@ -1,9 +1,28 @@
-import { NextAuthOptions } from "next-auth";
+import { NextAuthOptions, DefaultSession } from "next-auth";
 import { getServerSession } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import bcrypt from "bcryptjs";
+
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+    } & DefaultSession["user"];
+  }
+
+  interface User {
+    id: string;
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string;
+  }
+}
 
 const providers: NextAuthOptions["providers"] = [
   {
@@ -16,6 +35,7 @@ const providers: NextAuthOptions["providers"] = [
     },
     async authorize(credentials) {
       if (!credentials?.email || !credentials?.password) {
+        logger.warn("Auth: missing credentials");
         return null;
       }
 
@@ -24,6 +44,7 @@ const providers: NextAuthOptions["providers"] = [
       });
 
       if (!user || !user.password) {
+        logger.warn("Auth: user not found or no password", { email: credentials.email as string });
         return null;
       }
 
@@ -33,6 +54,7 @@ const providers: NextAuthOptions["providers"] = [
       );
 
       if (!isValid) {
+        logger.warn("Auth: invalid password", { email: credentials.email as string });
         return null;
       }
 
@@ -83,7 +105,7 @@ export const authOptions: NextAuthOptions = {
                 data: { avatar: user.image },
               });
             }
-            (user as { id?: string }).id = existingUser.id;
+            user.id = existingUser.id;
           } else {
             const newUser = await prisma.user.create({
               data: {
@@ -98,9 +120,10 @@ export const authOptions: NextAuthOptions = {
                 },
               },
             });
-            (user as { id?: string }).id = newUser.id;
+            user.id = newUser.id;
           }
-        } catch {
+        } catch (error) {
+          logger.error("Auth: OAuth sign-in database error", { error });
           return false;
         }
       }
@@ -114,7 +137,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as { id?: string }).id = token.id as string;
+        session.user.id = token.id;
       }
       return session;
     },
@@ -135,7 +158,7 @@ export async function getCurrentUser(request: Request): Promise<AuthUser | null>
     return null;
   }
 
-  const userId = (session.user as { id?: string }).id;
+  const userId = session.user.id;
   if (!userId) {
     return null;
   }

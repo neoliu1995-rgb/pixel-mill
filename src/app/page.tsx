@@ -25,6 +25,8 @@ import type { UserTier } from "@/lib/providers/router";
 const InspirationGallery = dynamic(() => import("@/components/gallery/InspirationGallery"), { ssr: false });
 const BatchGenerator = dynamic(() => import("@/components/generator/BatchGenerator"), { ssr: false });
 const SocialProof = dynamic(() => import("@/components/social/SocialProof"), { ssr: false });
+const BannerAd = dynamic(() => import("@/components/ads/BannerAd").then(m => ({ default: m.BannerAd })), { ssr: false });
+const InArticleAd = dynamic(() => import("@/components/ads/BannerAd").then(m => ({ default: m.InArticleAd })), { ssr: false });
 
 export default function HomePage() {
   const searchParams = useSearchParams();
@@ -619,6 +621,8 @@ export default function HomePage() {
           ))}
         </div>
 
+        <BannerAd />
+
         {/* FAQ */}
         <div className="mt-12">
           <div className="text-center mb-8">
@@ -655,6 +659,8 @@ export default function HomePage() {
         <div className="mt-12">
           <SocialProof />
         </div>
+
+        <InArticleAd />
 
         {/* CTA */}
         <div className="mt-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-6 sm:p-8 text-center">

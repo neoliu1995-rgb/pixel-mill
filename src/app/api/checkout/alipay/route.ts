@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { alipayClient, createAlipayOrder, ALIPAY_PLANS } from "@/lib/alipay";
 import { rateLimiter, dbRateLimitCheck, sanitizeCheckoutInput } from "@/lib/payment-security";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
     const forwarded = request.headers.get("x-forwarded-for");
     const ip = forwarded ? forwarded.split(",")[0].trim() : "unknown";
 
-    const rateLimitResult = rateLimiter.check(ip);
+    const rateLimitResult = await rateLimiter.check(ip);
     if (!rateLimitResult.allowed) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
@@ -36,9 +37,9 @@ export async function POST(request: Request) {
     let sanitized: ReturnType<typeof sanitizeCheckoutInput>;
     try {
       sanitized = sanitizeCheckoutInput({ ...body, currency: "cny" });
-    } catch (validationError: any) {
+    } catch (validationError: unknown) {
       return NextResponse.json(
-        { error: validationError.message },
+        { error: validationError instanceof Error ? validationError.message : "Invalid input" },
         { status: 400 }
       );
     }
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
 
     const planData = ALIPAY_PLANS[plan as keyof typeof ALIPAY_PLANS];
     let amount =
-      (planData as any)?.[billingPeriod] ?? 49.9;
+      billingPeriod === "yearly" ? (planData?.yearly ?? 49.9) : (planData?.monthly ?? 49.9);
 
     if (couponCode && typeof couponCode === "string") {
       const coupon = await prisma.coupon.findUnique({
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: paymentUrl });
   } catch (error) {
-    console.error("Error creating Alipay order:", error);
+    logger.error("Error creating Alipay order:", { error });
     return NextResponse.json(
       { error: "Failed to create Alipay order" },
       { status: 500 }

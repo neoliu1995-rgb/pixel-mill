@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { wechatPayClient, createWechatOrder, WECHAT_PLANS } from "@/lib/wechat-pay";
 import { rateLimiter, dbRateLimitCheck, sanitizeCheckoutInput } from "@/lib/payment-security";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
     const forwarded = request.headers.get("x-forwarded-for");
     const ip = forwarded ? forwarded.split(",")[0].trim() : "unknown";
 
-    const rateLimitResult = rateLimiter.check(ip);
+    const rateLimitResult = await rateLimiter.check(ip);
     if (!rateLimitResult.allowed) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
@@ -36,9 +37,9 @@ export async function POST(request: Request) {
     let sanitized: ReturnType<typeof sanitizeCheckoutInput>;
     try {
       sanitized = sanitizeCheckoutInput({ ...body, currency: "cny" });
-    } catch (validationError: any) {
+    } catch (validationError: unknown) {
       return NextResponse.json(
-        { error: validationError.message },
+        { error: validationError instanceof Error ? validationError.message : "Invalid input" },
         { status: 400 }
       );
     }
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
 
     const planData = WECHAT_PLANS[plan as keyof typeof WECHAT_PLANS];
     let amount =
-      (planData as any)?.[billingPeriod] ?? 49.9;
+      billingPeriod === "yearly" ? (planData?.yearly ?? 49.9) : (planData?.monthly ?? 49.9);
 
     if (couponCode && typeof couponCode === "string") {
       const coupon = await prisma.coupon.findUnique({
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ codeUrl });
   } catch (error) {
-    console.error("Error creating WeChat Pay order:", error);
+    logger.error("Error creating WeChat Pay order:", { error });
     return NextResponse.json(
       { error: "Failed to create WeChat Pay order" },
       { status: 500 }

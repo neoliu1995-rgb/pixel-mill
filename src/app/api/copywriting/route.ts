@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { routeCopywriting } from "@/lib/providers/router";
 import { getCurrentUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 interface CopywritingRequest {
   productName: string;
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
       cost: result.cost,
     });
   } catch (error) {
-    console.error("Copywriting error:", error);
+    logger.error("Copywriting error:", { error });
     return NextResponse.json(
       { success: false, error: "文案生成失败，请重试。" },
       { status: 500 }

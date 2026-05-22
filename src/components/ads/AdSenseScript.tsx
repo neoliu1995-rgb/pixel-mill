@@ -1,10 +1,10 @@
-import Script from "next/script";
-
 export function AdSenseScriptServer() {
+  const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
+  if (!client || client === "ca-pub-XXXXXXXXXX") return null;
   return (
-    <Script
-      strategy="afterInteractive"
-      src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT || "ca-pub-XXXXXXXXXX"}`}
+    <script
+      async
+      src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`}
       crossOrigin="anonymous"
     />
   );

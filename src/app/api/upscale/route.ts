@@ -3,6 +3,7 @@ import { routeUpscale } from "@/lib/providers/router";
 import { upscaleWithCanvas } from "@/lib/upscale-server";
 import { addWatermark } from "@/lib/watermark";
 import { getCurrentUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
           try {
             resultUrl = await addWatermark(result.imageUrl);
           } catch (wmError) {
-            console.error("Watermark error:", wmError);
+            logger.error("Watermark error:", { error: wmError });
           }
         }
         return NextResponse.json({
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
           cost: result.cost,
         });
       } catch (aiError) {
-        console.error("AI upscale failed, falling back to canvas:", aiError);
+        logger.error("AI upscale failed, falling back to canvas:", { error: aiError });
       }
     }
 
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
       try {
         canvasUrl = await addWatermark(canvasResult);
       } catch (wmError) {
-        console.error("Watermark error:", wmError);
+        logger.error("Watermark error:", { error: wmError });
       }
     }
     return NextResponse.json({
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
       warning: "Used canvas upscaling - quality may be lower than AI upscaling",
     });
   } catch (error) {
-    console.error("Upscale error:", error);
+    logger.error("Upscale error:", { error });
     return NextResponse.json(
       { error: "图片放大失败：" + (error as Error).message, success: false },
       { status: 500 }

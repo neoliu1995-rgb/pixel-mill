@@ -1,7 +1,7 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { Language, translations } from "@/lib/i18n";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { Language, translations, loadLanguage, languages } from "@/lib/i18n";
 
 type TranslationType = any;
 
@@ -9,54 +9,57 @@ interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   t: TranslationType;
+  isLoading: boolean;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-const supportedLanguages: Language[] = ["en", "zh", "ja", "ko", "es", "fr", "de", "pt", "ru", "ar", "hi"];
-
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>("en");
+  const [language, setLanguageState] = useState<Language>("en");
+  const [t, setT] = useState<TranslationType>(translations.en);
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    const saved = localStorage.getItem("language") as Language;
-    if (saved && supportedLanguages.includes(saved)) {
-      setLanguage(saved);
-    } else {
-      const browserLang = navigator.language.toLowerCase();
-      if (browserLang.startsWith("zh")) {
-        setLanguage("zh");
-      } else if (browserLang.startsWith("ja")) {
-        setLanguage("ja");
-      } else if (browserLang.startsWith("ko")) {
-        setLanguage("ko");
-      } else if (browserLang.startsWith("es")) {
-        setLanguage("es");
-      } else if (browserLang.startsWith("fr")) {
-        setLanguage("fr");
-      } else if (browserLang.startsWith("de")) {
-        setLanguage("de");
-      } else if (browserLang.startsWith("pt")) {
-        setLanguage("pt");
-      } else if (browserLang.startsWith("ru")) {
-        setLanguage("ru");
-      } else if (browserLang.startsWith("ar")) {
-        setLanguage("ar");
-      } else if (browserLang.startsWith("hi")) {
-        setLanguage("hi");
-      }
+  const handleLanguageChange = useCallback(async (lang: Language) => {
+    setLanguageState(lang);
+    localStorage.setItem("language", lang);
+    if (translations[lang]) {
+      setT(translations[lang]);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const loaded = await loadLanguage(lang);
+      setT(loaded);
+    } catch {
+      setT(translations.en);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
-  const handleSetLanguage = (lang: Language) => {
-    setLanguage(lang);
-    localStorage.setItem("language", lang);
-  };
-
-  const t = translations[language];
+  useEffect(() => {
+    const saved = localStorage.getItem("language") as Language;
+    if (saved && languages.includes(saved)) {
+      if (saved === "en") return;
+      handleLanguageChange(saved);
+      return;
+    }
+    const browserLang = navigator.language.toLowerCase();
+    const langMap: Record<string, Language> = {
+      zh: "zh", ja: "ja", ko: "ko", es: "es",
+      fr: "fr", de: "de", pt: "pt", ru: "ru",
+      ar: "ar", hi: "hi",
+    };
+    for (const [prefix, lang] of Object.entries(langMap)) {
+      if (browserLang.startsWith(prefix)) {
+        handleLanguageChange(lang);
+        return;
+      }
+    }
+  }, [handleLanguageChange]);
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage: handleSetLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage: handleLanguageChange, t, isLoading }}>
       {children}
     </LanguageContext.Provider>
   );

@@ -9,6 +9,8 @@ import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { rateLimiter } from "@/lib/rate-limiter";
 
+export const maxDuration = 60;
+
 export type ModelType = "flux-schnell" | "flux-dev" | "sdxl" | "turbo" | "realistic" | "anime" | "auto"
   | "black-forest-labs/FLUX.2-pro" | "black-forest-labs/FLUX.2-flex" | "Zhihub-ai/Z-Image-Turbo"
   | "wanx2.6-t2i" | "wanx2.1-t2i-turbo";
@@ -91,7 +93,7 @@ export async function POST(req: NextRequest) {
     let userTier: "free" | "pro" | "business";
 
     if (isAnonymous) {
-      const ipRateLimit = rateLimiter.check(`gen:${ip}`, 10, 60_000);
+      const ipRateLimit = await rateLimiter.check(`gen:${ip}`, 10, 60_000);
       if (!ipRateLimit.allowed) {
         return NextResponse.json(
           { error: "Too many requests. Please sign in for more generations.", needAuth: true },
@@ -99,7 +101,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const dailyRateLimit = rateLimiter.check(`gen-daily:${ip}`, 10, 86_400_000);
+      const dailyRateLimit = await rateLimiter.check(`gen-daily:${ip}`, 10, 86_400_000);
       if (!dailyRateLimit.allowed) {
         return NextResponse.json(
           {
@@ -139,7 +141,7 @@ export async function POST(req: NextRequest) {
       userTier = requestUserTier;
     }
 
-    console.log(`[${new Date().toISOString()}] Generation request:`, {
+    logger.info("Generation request", {
       promptLength: prompt?.length || 0,
       width, height,
       model,
@@ -170,7 +172,7 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      if (image.length > 5000000) {
+      if (image.length > 3000000) {
         return NextResponse.json(
           { error: "参考图片太大，请压缩后重试（建议小于2MB）" },
           { status: 400 }
@@ -253,7 +255,7 @@ export async function POST(req: NextRequest) {
       logger.error("R2 upload error:", { error: uploadError });
     }
 
-    console.log(`Generation successful! Provider: ${result.provider}, Model: ${result.model}, Latency: ${totalLatency}ms, Cost: ${result.cost}, R2: ${r2Url ? "yes" : "no"}, Anonymous: ${isAnonymous}`);
+    logger.info("Generation successful", { provider: result.provider, model: result.model, latency: totalLatency, cost: result.cost, r2: r2Url ? "yes" : "no", anonymous: isAnonymous });
 
     if (!isAnonymous) {
       await incrementUsage(userId, "dailyGenerations");
@@ -270,7 +272,7 @@ export async function POST(req: NextRequest) {
         },
       });
     } catch (historyError) {
-      console.error("Failed to save generation history:", historyError);
+      logger.error("Failed to save generation history", { error: historyError });
     }
 
     const config = QUOTA_LIMITS[userTier] || QUOTA_LIMITS.free;

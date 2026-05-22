@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import { refundAlipayOrder, ALIPAY_PLANS } from "@/lib/alipay";
@@ -71,10 +72,15 @@ export async function POST(request: Request) {
         });
 
         if (invoices.data.length > 0) {
-          const latestInvoice = invoices.data[0] as any;
+          const latestInvoice = invoices.data[0] as Stripe.Invoice & {
+            payment_intent: string | Stripe.PaymentIntent | null;
+          };
           if (latestInvoice.payment_intent) {
+            const paymentIntentId = typeof latestInvoice.payment_intent === "string"
+              ? latestInvoice.payment_intent
+              : latestInvoice.payment_intent.id;
             const refund = await stripe.refunds.create({
-              payment_intent: latestInvoice.payment_intent as string,
+              payment_intent: paymentIntentId,
             });
             refundAmount = refund.amount / 100;
           }
@@ -112,8 +118,8 @@ export async function POST(request: Request) {
       }
 
       refundAmount = billingPeriod === "yearly"
-        ? (planData as any).yearly ?? (planData as any).monthly
-        : (planData as any).monthly ?? 49.9;
+        ? planData.yearly ?? planData.monthly
+        : planData.monthly ?? 49.9;
 
       const result = await refundAlipayOrder(
         "",
@@ -155,8 +161,8 @@ export async function POST(request: Request) {
       }
 
       refundAmount = billingPeriod === "yearly"
-        ? (planData as any).yearly ?? (planData as any).monthly
-        : (planData as any).monthly ?? 49.9;
+        ? planData.yearly ?? planData.monthly
+        : planData.monthly ?? 49.9;
 
       const totalFen = Math.round(refundAmount * 100);
       const refundFen = totalFen;

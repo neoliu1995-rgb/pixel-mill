@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 export async function GET(req: NextRequest) {
   try {
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
     if (error.message === "Admin access required") {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
-    console.error("Admin coupons GET error:", error);
+    logger.error("Admin coupons GET error:", { error });
     return NextResponse.json({ error: "Failed to fetch coupons" }, { status: 500 });
   }
 }
@@ -94,7 +95,7 @@ export async function POST(req: NextRequest) {
     if (error.message === "Admin access required") {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
-    console.error("Admin coupons POST error:", error);
+    logger.error("Admin coupons POST error:", { error });
     return NextResponse.json({ error: "Failed to create coupon" }, { status: 500 });
   }
 }
@@ -131,7 +132,7 @@ export async function DELETE(req: NextRequest) {
     if (error.message === "Admin access required") {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
-    console.error("Admin coupons DELETE error:", error);
+    logger.error("Admin coupons DELETE error:", { error });
     return NextResponse.json({ error: "Failed to delete coupon" }, { status: 500 });
   }
 }

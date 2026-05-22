@@ -8,7 +8,7 @@ function isPaymentRoute(pathname: string): boolean {
   return PAYMENT_ROUTES.some((route) => pathname.startsWith(route));
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   if (!isPaymentRoute(request.nextUrl.pathname)) {
     return NextResponse.next();
   }
@@ -16,7 +16,7 @@ export function middleware(request: NextRequest) {
   const forwarded = request.headers.get("x-forwarded-for");
   const ip = forwarded ? forwarded.split(",")[0].trim() : "unknown";
 
-  const result = rateLimiter.check(ip);
+  const result = await rateLimiter.check(ip);
 
   if (!result.allowed) {
     return NextResponse.json(

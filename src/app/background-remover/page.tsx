@@ -4,13 +4,13 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useLanguage } from "@/components/LanguageProvider";
-import { 
-  Upload, 
-  Scissors, 
-  Image as ImageIcon, 
-  Loader2, 
-  Download, 
-  X, 
+import {
+  Upload,
+  Scissors,
+  Image as ImageIcon,
+  Loader2,
+  Download,
+  X,
   Check,
   Sparkles,
   ArrowRight,

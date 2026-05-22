@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 export async function GET(req: NextRequest) {
   try {
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
       hasMore: skip + items.length < total,
     });
   } catch (error) {
-    console.error("Error fetching history:", error);
+    logger.error("Error fetching history:", { error });
     return NextResponse.json({ error: "Failed to fetch history" }, { status: 500 });
   }
 }
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
       createdAt: item.createdAt.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error("Error saving history:", error);
+    logger.error("Error saving history:", { error });
     return NextResponse.json({ error: "Failed to save history" }, { status: 500 });
   }
 }
@@ -106,7 +107,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting history:", error);
+    logger.error("Error deleting history:", { error });
     return NextResponse.json({ error: "Failed to delete history" }, { status: 500 });
   }
 }

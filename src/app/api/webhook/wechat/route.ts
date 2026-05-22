@@ -6,6 +6,14 @@ import {
 import { prisma } from "@/lib/prisma";
 import { sendPaymentConfirmationEmail } from "@/lib/email";
 import { CNY_PLANS } from "@/lib/stripe";
+import { logger } from "@/lib/logger";
+
+interface WechatPaymentNotification {
+  trade_state: string;
+  out_trade_no: string;
+  transaction_id: string;
+  attach?: string;
+}
 
 export async function POST(request: Request) {
   try {
@@ -17,7 +25,7 @@ export async function POST(request: Request) {
 
     const isValid = await verifyWechatNotification(body, headers);
     if (!isValid) {
-      console.error("WeChat Pay notification signature verification failed");
+      logger.error("WeChat Pay notification signature verification failed");
       return new NextResponse(
         '<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[Signature verification failed]]></return_msg></xml>',
         {
@@ -27,7 +35,7 @@ export async function POST(request: Request) {
       );
     }
 
-    let notification: any;
+    let notification: WechatPaymentNotification | null = null;
     try {
       const parsed = JSON.parse(body);
       const resource = parsed.resource;
@@ -39,7 +47,7 @@ export async function POST(request: Request) {
         );
       }
     } catch {
-      console.error("Failed to parse WeChat Pay notification body");
+      logger.error("Failed to parse WeChat Pay notification body");
       return new NextResponse(
         '<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[Parse error]]></return_msg></xml>',
         {
@@ -50,7 +58,7 @@ export async function POST(request: Request) {
     }
 
     if (!notification) {
-      console.error("Failed to decrypt WeChat Pay notification");
+      logger.error("Failed to decrypt WeChat Pay notification");
       return new NextResponse(
         '<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[Decrypt error]]></return_msg></xml>',
         {
@@ -92,7 +100,7 @@ export async function POST(request: Request) {
       }
 
       if (!userId) {
-        console.error("No userId found for WeChat Pay trade:", outTradeNo);
+        logger.error("No userId found for WeChat Pay trade:", { outTradeNo });
         return new NextResponse(
           '<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[No userId]]></return_msg></xml>',
           {
@@ -154,7 +162,7 @@ export async function POST(request: Request) {
       }
     );
   } catch (error) {
-    console.error("WeChat Pay webhook error:", error);
+    logger.error("WeChat Pay webhook error:", { error });
     return new NextResponse(
       '<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[Internal error]]></return_msg></xml>',
       {

@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Suspense } from "react";
 import ClientLayout from "@/components/ClientLayout";
+import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
+import { AdSenseScriptServer } from "@/components/ads/AdSenseScript";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -20,7 +22,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "PixelMill - Free AI Image Generator | Create Stunning Images with AI",
     description: "Create stunning AI-generated images for free. No sign-up required. Powered by Gemini. Features include text-to-image, background removal, AI copywriting, viral effects, and e-commerce tools.",
-    url: "https://pixelmill.ai",
+    url: "https://pixelmill.xyz",
     siteName: "PixelMill",
     type: "website",
   },
@@ -48,6 +50,28 @@ export default function RootLayout({
         <Suspense fallback={<div className="min-h-screen bg-white" />}>
           <ClientLayout>{children}</ClientLayout>
         </Suspense>
+        <GoogleAnalytics />
+        <AdSenseScriptServer />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebApplication",
+              name: "PixelMill",
+              url: "https://pixelmill.xyz",
+              description: "Free AI Image Generator. No sign-up required. Create stunning images with AI in seconds.",
+              applicationCategory: "MultimediaApplication",
+              operatingSystem: "Web",
+              offers: [
+                { "@type": "Offer", price: "0", priceCurrency: "USD", description: "Free tier - 10 images/day" },
+                { "@type": "Offer", price: "7.99", priceCurrency: "USD", description: "Pro plan - 300 images/month" },
+                { "@type": "Offer", price: "14.99", priceCurrency: "USD", description: "Business plan - 800 images/month" },
+              ],
+              featureList: ["AI Image Generation", "Background Removal", "AI Copywriting", "Photo Effects", "E-commerce Tools"],
+            }),
+          }}
+        />
       </body>
     </html>
   );

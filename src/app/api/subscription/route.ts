@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import Stripe from "stripe";
 import { stripe, PRICES } from "@/lib/stripe";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   try {
@@ -24,15 +26,17 @@ export async function GET(request: Request) {
       return NextResponse.json({ subscription: null }, { status: 200 });
     }
 
-    const subscription = subscriptions.data[0] as any;
-    const price = subscription.items.data[0]?.price as any;
+    const subscription = subscriptions.data[0] as Stripe.Subscription & {
+      current_period_end: number;
+    };
+    const price: Stripe.Price | undefined = subscription.items.data[0]?.price;
 
     const invoices = await stripe.invoices.list({
       customer: customerId,
       limit: 10,
     });
 
-    const invoiceItems = invoices.data.map((invoice: any) => ({
+    const invoiceItems = invoices.data.map((invoice: Stripe.Invoice) => ({
       id: invoice.id,
       amount: invoice.total / 100,
       status: invoice.status,
@@ -52,7 +56,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Error fetching subscription:", error);
+    logger.error("Error fetching subscription:", { error });
     return NextResponse.json(
       { error: "Failed to fetch subscription" },
       { status: 500 }

@@ -39,7 +39,7 @@ const MODELS: ProviderModelInfo[] = [
     bestFor: ["灵活创作", "商业用途", "高自由度"],
   },
   {
-    id: "Zhihu-ai/Z-Image-Turbo",
+    id: "Tongyi-MAI/Z-Image-Turbo",
     name: "Z-Image Turbo",
     provider: "siliconflow",
     tier: "free",
@@ -131,7 +131,7 @@ export class SiliconFlowImageProvider implements ImageProvider {
 
     const model = options.image
       ? "black-forest-labs/FLUX.2-pro"
-      : (MODELS[0].id);
+      : (options.model || MODELS.find(m => m.tier === "free")?.id || MODELS[0].id);
     const image_size = formatImageSize(options.width, options.height);
 
     const body: Record<string, unknown> = {

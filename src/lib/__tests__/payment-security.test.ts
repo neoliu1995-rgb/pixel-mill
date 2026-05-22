@@ -1,5 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { rateLimiter, validatePaymentAmount, sanitizeCheckoutInput } from "@/lib/payment-security";
+
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    rateLimitEntry: {
+      findUnique: vi.fn().mockResolvedValue(null),
+      upsert: vi.fn().mockResolvedValue({ id: "1", key: "test", count: 1, resetAt: new Date() }),
+      update: vi.fn().mockResolvedValue({ id: "1", key: "test", count: 2, resetAt: new Date() }),
+      deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+    },
+  },
+}));
 
 vi.mock("@/lib/stripe", () => ({
   PLANS: {
@@ -28,90 +38,129 @@ vi.mock("@/lib/wechat-pay", () => ({
   },
 }));
 
+import { rateLimiter, validatePaymentAmount, sanitizeCheckoutInput } from "@/lib/payment-security";
+import { prisma } from "@/lib/prisma";
+
 describe("rateLimiter.check", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-05-18T12:00:00Z"));
+    vi.clearAllMocks();
+    vi.mocked(prisma.rateLimitEntry.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.rateLimitEntry.upsert).mockResolvedValue({ id: "1", key: "test", count: 1, resetAt: new Date(), createdAt: new Date(), updatedAt: new Date() });
+    vi.mocked(prisma.rateLimitEntry.update).mockResolvedValue({ id: "1", key: "test", count: 2, resetAt: new Date(), createdAt: new Date(), updatedAt: new Date() });
   });
 
-  it("should allow first request", () => {
-    const result = rateLimiter.check("192.168.1.1");
+  it("should allow first request when no entry exists", async () => {
+    const result = await rateLimiter.check("192.168.1.1");
     expect(result.allowed).toBe(true);
     expect(result.remaining).toBe(9);
   });
 
-  it("should allow requests under limit", () => {
-    for (let i = 0; i < 9; i++) {
-      rateLimiter.check("192.168.1.2");
-    }
-    const result = rateLimiter.check("192.168.1.2");
+  it("should allow requests under limit", async () => {
+    vi.mocked(prisma.rateLimitEntry.findUnique).mockResolvedValue({
+      id: "1",
+      key: "rl:192.168.1.2:60",
+      count: 9,
+      resetAt: new Date(Date.now() + 30_000),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any);
+    vi.mocked(prisma.rateLimitEntry.update).mockResolvedValue({
+      id: "1",
+      key: "rl:192.168.1.2:60",
+      count: 10,
+      resetAt: new Date(Date.now() + 30_000),
+    } as any);
+
+    const result = await rateLimiter.check("192.168.1.2");
     expect(result.allowed).toBe(true);
     expect(result.remaining).toBe(0);
   });
 
-  it("should deny request at limit", () => {
-    for (let i = 0; i < 10; i++) {
-      rateLimiter.check("192.168.1.3");
-    }
-    const result = rateLimiter.check("192.168.1.3");
+  it("should deny request at limit", async () => {
+    vi.mocked(prisma.rateLimitEntry.findUnique).mockResolvedValue({
+      id: "1",
+      key: "rl:192.168.1.3:60",
+      count: 10,
+      resetAt: new Date(Date.now() + 30_000),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any);
+
+    const result = await rateLimiter.check("192.168.1.3");
     expect(result.allowed).toBe(false);
     expect(result.remaining).toBe(0);
   });
 
-  it("should deny requests over limit", () => {
-    for (let i = 0; i < 15; i++) {
-      rateLimiter.check("192.168.1.4");
-    }
-    const result = rateLimiter.check("192.168.1.4");
+  it("should deny requests over limit", async () => {
+    vi.mocked(prisma.rateLimitEntry.findUnique).mockResolvedValue({
+      id: "1",
+      key: "rl:192.168.1.4:60",
+      count: 15,
+      resetAt: new Date(Date.now() + 30_000),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any);
+
+    const result = await rateLimiter.check("192.168.1.4");
     expect(result.allowed).toBe(false);
   });
 
-  it("should reset after window expires", () => {
-    for (let i = 0; i < 10; i++) {
-      rateLimiter.check("192.168.1.5");
-    }
-    const denied = rateLimiter.check("192.168.1.5");
-    expect(denied.allowed).toBe(false);
+  it("should reset after window expires", async () => {
+    vi.mocked(prisma.rateLimitEntry.findUnique).mockResolvedValue({
+      id: "1",
+      key: "rl:192.168.1.5:60",
+      count: 10,
+      resetAt: new Date(Date.now() - 1_000),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any);
 
-    vi.advanceTimersByTime(60_001);
-
-    const result = rateLimiter.check("192.168.1.5");
+    const result = await rateLimiter.check("192.168.1.5");
     expect(result.allowed).toBe(true);
     expect(result.remaining).toBe(9);
   });
 
-  it("should track different IPs independently", () => {
-    rateLimiter.check("10.0.0.1");
-    rateLimiter.check("10.0.0.1");
-    const result1 = rateLimiter.check("10.0.0.1");
+  it("should track different IPs independently", async () => {
+    vi.mocked(prisma.rateLimitEntry.findUnique)
+      .mockResolvedValueOnce({
+        id: "1",
+        key: "rl:10.0.0.1:60",
+        count: 2,
+        resetAt: new Date(Date.now() + 30_000),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any)
+      .mockResolvedValueOnce(null);
+    vi.mocked(prisma.rateLimitEntry.update).mockResolvedValue({
+      id: "1",
+      key: "rl:10.0.0.1:60",
+      count: 3,
+      resetAt: new Date(Date.now() + 30_000),
+    } as any);
+
+    const result1 = await rateLimiter.check("10.0.0.1");
     expect(result1.remaining).toBe(7);
 
-    const result2 = rateLimiter.check("10.0.0.2");
+    const result2 = await rateLimiter.check("10.0.0.2");
     expect(result2.remaining).toBe(9);
   });
 
-  it("should respect custom limit", () => {
-    const result = rateLimiter.check("172.16.0.1", 5);
+  it("should respect custom limit", async () => {
+    const result = await rateLimiter.check("172.16.0.1", 5);
     expect(result.allowed).toBe(true);
     expect(result.remaining).toBe(4);
   });
 
-  it("should respect custom window", () => {
-    for (let i = 0; i < 3; i++) {
-      rateLimiter.check("172.16.0.2", 3, 30_000);
-    }
-    const denied = rateLimiter.check("172.16.0.2", 3, 30_000);
-    expect(denied.allowed).toBe(false);
-
-    vi.advanceTimersByTime(30_001);
-
-    const result = rateLimiter.check("172.16.0.2", 3, 30_000);
-    expect(result.allowed).toBe(true);
+  it("should return resetAt timestamp", async () => {
+    const result = await rateLimiter.check("192.168.1.10");
+    expect(result.resetAt).toBeGreaterThan(0);
   });
 
-  it("should return resetAt timestamp", () => {
-    const result = rateLimiter.check("192.168.1.10");
-    expect(result.resetAt).toBeGreaterThan(0);
+  it("should fail open on database error", async () => {
+    vi.mocked(prisma.rateLimitEntry.findUnique).mockRejectedValue(new Error("DB error"));
+
+    const result = await rateLimiter.check("192.168.1.99");
+    expect(result.allowed).toBe(true);
   });
 });
 

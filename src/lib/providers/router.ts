@@ -10,6 +10,7 @@ import { SiliconFlowImageProvider, SiliconFlowTextProvider } from "./siliconflow
 import { AliBailianImageProvider } from "./alibailian";
 import { AliBailianEditProvider } from "./alibailian-edit";
 import { GeminiImageProvider } from "./gemini";
+import { logger } from "@/lib/logger";
 
 type UserTier = "free" | "pro" | "business";
 
@@ -114,6 +115,11 @@ function selectModelForPrompt(
 
   const hasChinese = isChinese(prompt);
 
+  if (tier === "free") {
+    const pollinationsModel = available.find((m) => m.provider === "pollinations");
+    if (pollinationsModel) return pollinationsModel;
+  }
+
   const chineseModels = available.filter((m) => m.supportsChinese);
   const englishModels = available.filter((m) => !m.supportsChinese || m.quality >= 4);
 
@@ -146,7 +152,7 @@ export async function routeGenerate(
     result.model = selected.id;
     return result;
   } catch (error) {
-    console.error(`Provider ${selected.provider} failed:`, error);
+    logger.error(`Provider ${selected.provider} failed:`, { error });
 
     const fallbacks = getAvailableImageProviders(tier).filter(
       (m) => m.id !== selected.id
@@ -160,7 +166,7 @@ export async function routeGenerate(
         result.model = fallback.id;
         return result;
       } catch (e) {
-        console.error(`Fallback ${fallback.provider} also failed:`, e);
+        logger.error(`Fallback ${fallback.provider} also failed:`, { error: e });
       }
     }
 
@@ -175,7 +181,7 @@ export async function routeTranslate(chinesePrompt: string): Promise<string> {
     try {
       return await provider.translatePrompt(chinesePrompt);
     } catch (e) {
-      console.error(`Translation provider ${provider.name} failed:`, e);
+      logger.error(`Translation provider ${provider.name} failed:`, { error: e });
     }
   }
   return chinesePrompt;
@@ -189,7 +195,7 @@ export async function routeCopywriting(
     try {
       return await provider.generateCopywriting(input);
     } catch (e) {
-      console.error(`Copywriting provider ${provider.name} failed:`, e);
+      logger.error(`Copywriting provider ${provider.name} failed:`, { error: e });
     }
   }
   throw new Error("所有文案生成提供商均不可用");
@@ -201,7 +207,7 @@ export async function routeRemoveBackground(imageUrl: string): Promise<ProviderI
     try {
       return await provider.removeBackground(imageUrl);
     } catch (e) {
-      console.error(`Edit provider ${provider.name} failed:`, e);
+      logger.error(`Edit provider ${provider.name} failed:`, { error: e });
     }
   }
   throw new Error("所有抠图提供商均不可用");
@@ -216,7 +222,7 @@ export async function routeReplaceBackground(
     try {
       return await provider.replaceBackground(imageUrl, bgColor);
     } catch (e) {
-      console.error(`Edit provider ${provider.name} failed:`, e);
+      logger.error(`Edit provider ${provider.name} failed:`, { error: e });
     }
   }
   throw new Error("所有换背景提供商均不可用");
@@ -231,7 +237,7 @@ export async function routeUpscale(
     try {
       return await provider.upscale(imageUrl, scale);
     } catch (e) {
-      console.error(`Upscale provider ${provider.name} failed:`, e);
+      logger.error(`Upscale provider ${provider.name} failed:`, { error: e });
     }
   }
   throw new Error("所有超分提供商均不可用");

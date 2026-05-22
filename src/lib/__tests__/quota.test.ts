@@ -267,4 +267,180 @@ describe("getQuotaInfo", () => {
     const result = await getQuotaInfo("user1", "free");
     expect(result.daily.remaining).toBe(0);
   });
+
+  it("should return quota info for business tier", async () => {
+    vi.mocked(prisma.usageRecord.findUnique).mockResolvedValue(null);
+    const result = await getQuotaInfo("user1", "business");
+    expect(result.daily.limit).toBe(999);
+    expect(result.monthly.limit).toBe(800);
+    expect(result.bgRemoval.limit).toBe(999);
+    expect(result.copywriting.limit).toBe(999);
+  });
+
+  it("should return all four quota categories", async () => {
+    vi.mocked(prisma.usageRecord.findUnique).mockResolvedValue(null);
+    const result = await getQuotaInfo("user1", "pro");
+    expect(result).toHaveProperty("daily");
+    expect(result).toHaveProperty("monthly");
+    expect(result).toHaveProperty("bgRemoval");
+    expect(result).toHaveProperty("copywriting");
+  });
+
+  it("should include used, limit, and remaining for each category", async () => {
+    vi.mocked(prisma.usageRecord.findUnique).mockResolvedValue(null);
+    const result = await getQuotaInfo("user1", "pro");
+    for (const category of ["daily", "monthly", "bgRemoval", "copywriting"] as const) {
+      expect(result[category]).toHaveProperty("used");
+      expect(result[category]).toHaveProperty("limit");
+      expect(result[category]).toHaveProperty("remaining");
+    }
+  });
+
+  it("should handle all usage types populated for business tier", async () => {
+    vi.mocked(prisma.usageRecord.findUnique).mockImplementation((args: any) => {
+      const usageType = args.where.userId_usageType_periodKey.usageType;
+      const counts: Record<string, number> = {
+        dailyGenerations: 500,
+        monthlyGenerations: 600,
+        monthlyBgRemoval: 100,
+        monthlyCopywriting: 200,
+      };
+      const count = counts[usageType] || 0;
+      return Promise.resolve({ id: "1", userId: "user1", usageType, periodKey: "2026-05", count, createdAt: new Date(), updatedAt: new Date() }) as any;
+    });
+    const result = await getQuotaInfo("user1", "business");
+    expect(result.daily.used).toBe(500);
+    expect(result.daily.remaining).toBe(499);
+    expect(result.monthly.used).toBe(600);
+    expect(result.monthly.remaining).toBe(200);
+    expect(result.bgRemoval.used).toBe(100);
+    expect(result.bgRemoval.remaining).toBe(899);
+    expect(result.copywriting.used).toBe(200);
+    expect(result.copywriting.remaining).toBe(799);
+  });
+});
+
+describe("checkQuota - per plan tier limits", () => {
+  it("should return correct free tier limits for all usage types", () => {
+    expect(checkQuota("free", "dailyGenerations", 0)).toEqual({ allowed: true, remaining: 10 });
+    expect(checkQuota("free", "monthlyGenerations", 0)).toEqual({ allowed: true, remaining: 300 });
+    expect(checkQuota("free", "monthlyBgRemoval", 0)).toEqual({ allowed: false, remaining: 0 });
+    expect(checkQuota("free", "monthlyCopywriting", 0)).toEqual({ allowed: true, remaining: 3 });
+  });
+
+  it("should return correct pro tier limits for all usage types", () => {
+    expect(checkQuota("pro", "dailyGenerations", 0)).toEqual({ allowed: true, remaining: 50 });
+    expect(checkQuota("pro", "monthlyGenerations", 0)).toEqual({ allowed: true, remaining: 300 });
+    expect(checkQuota("pro", "monthlyBgRemoval", 0)).toEqual({ allowed: true, remaining: 20 });
+    expect(checkQuota("pro", "monthlyCopywriting", 0)).toEqual({ allowed: true, remaining: 100 });
+  });
+
+  it("should return correct business tier limits for all usage types", () => {
+    expect(checkQuota("business", "dailyGenerations", 0)).toEqual({ allowed: true, remaining: 999 });
+    expect(checkQuota("business", "monthlyGenerations", 0)).toEqual({ allowed: true, remaining: 800 });
+    expect(checkQuota("business", "monthlyBgRemoval", 0)).toEqual({ allowed: true, remaining: 999 });
+    expect(checkQuota("business", "monthlyCopywriting", 0)).toEqual({ allowed: true, remaining: 999 });
+  });
+});
+
+describe("checkQuota - edge cases", () => {
+  it("should allow at limit minus 1", () => {
+    const result = checkQuota("free", "dailyGenerations", 9);
+    expect(result.allowed).toBe(true);
+    expect(result.remaining).toBe(1);
+  });
+
+  it("should deny at exact limit", () => {
+    const result = checkQuota("pro", "monthlyBgRemoval", 20);
+    expect(result.allowed).toBe(false);
+    expect(result.remaining).toBe(0);
+  });
+
+  it("should deny when usage far exceeds limit", () => {
+    const result = checkQuota("free", "dailyGenerations", 1000);
+    expect(result.allowed).toBe(false);
+    expect(result.remaining).toBe(0);
+  });
+
+  it("should handle zero usage correctly", () => {
+    const result = checkQuota("business", "monthlyGenerations", 0);
+    expect(result.allowed).toBe(true);
+    expect(result.remaining).toBe(800);
+  });
+
+  it("should handle usage type with zero limit (free bgRemoval)", () => {
+    const result = checkQuota("free", "monthlyBgRemoval", 0);
+    expect(result.allowed).toBe(false);
+    expect(result.remaining).toBe(0);
+  });
+});
+
+describe("incrementUsage - period key behavior", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should use daily period key for dailyGenerations", async () => {
+    vi.mocked(prisma.usageRecord.upsert).mockResolvedValue({
+      id: "1",
+      userId: "user1",
+      usageType: "dailyGenerations",
+      periodKey: new Date().toISOString().split("T")[0],
+      count: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    await incrementUsage("user1", "dailyGenerations");
+    const callArg = vi.mocked(prisma.usageRecord.upsert).mock.calls[0][0] as any;
+    const periodKey = callArg.where.userId_usageType_periodKey.periodKey;
+    expect(periodKey).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it("should use monthly period key for monthlyGenerations", async () => {
+    vi.mocked(prisma.usageRecord.upsert).mockResolvedValue({
+      id: "1",
+      userId: "user1",
+      usageType: "monthlyGenerations",
+      periodKey: "2026-05",
+      count: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    await incrementUsage("user1", "monthlyGenerations");
+    const callArg = vi.mocked(prisma.usageRecord.upsert).mock.calls[0][0] as any;
+    const periodKey = callArg.where.userId_usageType_periodKey.periodKey;
+    expect(periodKey).toMatch(/^\d{4}-\d{2}$/);
+  });
+
+  it("should use monthly period key for monthlyBgRemoval", async () => {
+    vi.mocked(prisma.usageRecord.upsert).mockResolvedValue({
+      id: "1",
+      userId: "user1",
+      usageType: "monthlyBgRemoval",
+      periodKey: "2026-05",
+      count: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    await incrementUsage("user1", "monthlyBgRemoval");
+    const callArg = vi.mocked(prisma.usageRecord.upsert).mock.calls[0][0] as any;
+    const periodKey = callArg.where.userId_usageType_periodKey.periodKey;
+    expect(periodKey).toMatch(/^\d{4}-\d{2}$/);
+  });
+
+  it("should use monthly period key for monthlyCopywriting", async () => {
+    vi.mocked(prisma.usageRecord.upsert).mockResolvedValue({
+      id: "1",
+      userId: "user1",
+      usageType: "monthlyCopywriting",
+      periodKey: "2026-05",
+      count: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    await incrementUsage("user1", "monthlyCopywriting");
+    const callArg = vi.mocked(prisma.usageRecord.upsert).mock.calls[0][0] as any;
+    const periodKey = callArg.where.userId_usageType_periodKey.periodKey;
+    expect(periodKey).toMatch(/^\d{4}-\d{2}$/);
+  });
 });

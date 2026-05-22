@@ -1,26 +1,33 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { randomUUID } from "crypto";
+import { logger } from "@/lib/logger";
 
-const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
-const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME;
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL;
+function getR2Config() {
+  return {
+    accountId: process.env.R2_ACCOUNT_ID,
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    bucketName: process.env.R2_BUCKET_NAME,
+    publicUrl: process.env.R2_PUBLIC_URL,
+  };
+}
 
 function isR2Configured(): boolean {
-  return !!(R2_ACCOUNT_ID && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY && R2_BUCKET_NAME);
+  const c = getR2Config();
+  return !!(c.accountId && c.accessKeyId && c.secretAccessKey && c.bucketName);
 }
 
 let s3Client: S3Client | null = null;
 
 function getS3Client(): S3Client {
   if (!s3Client) {
+    const c = getR2Config();
     s3Client = new S3Client({
       region: "auto",
-      endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      endpoint: `https://${c.accountId}.r2.cloudflarestorage.com`,
       credentials: {
-        accessKeyId: R2_ACCESS_KEY_ID!,
-        secretAccessKey: R2_SECRET_ACCESS_KEY!,
+        accessKeyId: c.accessKeyId!,
+        secretAccessKey: c.secretAccessKey!,
       },
     });
   }
@@ -58,10 +65,11 @@ function generateKey(userId?: string, ext: string = "png"): string {
 }
 
 export function getPublicUrl(key: string): string {
-  if (R2_PUBLIC_URL) {
-    return `${R2_PUBLIC_URL.replace(/\/$/, "")}/${key}`;
+  const c = getR2Config();
+  if (c.publicUrl) {
+    return `${c.publicUrl.replace(/\/$/, "")}/${key}`;
   }
-  return `https://${R2_BUCKET_NAME}.${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${key}`;
+  return `https://${c.bucketName}.${c.accountId}.r2.cloudflarestorage.com/${key}`;
 }
 
 export async function uploadImage(
@@ -79,9 +87,10 @@ export async function uploadImage(
     const buffer = Buffer.from(data, "base64");
 
     const client = getS3Client();
+    const c = getR2Config();
     await client.send(
       new PutObjectCommand({
-        Bucket: R2_BUCKET_NAME,
+        Bucket: c.bucketName,
         Key: objectKey,
         Body: buffer,
         ContentType: mimeType,
@@ -90,7 +99,7 @@ export async function uploadImage(
 
     return getPublicUrl(objectKey);
   } catch (error) {
-    console.error("R2 upload failed:", error);
+    logger.error("R2 upload failed:", { error });
     return base64Data;
   }
 }
@@ -102,13 +111,14 @@ export async function deleteImage(key: string): Promise<void> {
 
   try {
     const client = getS3Client();
+    const c = getR2Config();
     await client.send(
       new DeleteObjectCommand({
-        Bucket: R2_BUCKET_NAME,
+        Bucket: c.bucketName,
         Key: key,
       })
     );
   } catch (error) {
-    console.error("R2 delete failed:", error);
+    logger.error("R2 delete failed:", { error });
   }
 }

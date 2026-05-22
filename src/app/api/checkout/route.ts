@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { stripe, PRICES, CNY_PRICES } from "@/lib/stripe";
 import { rateLimiter, dbRateLimitCheck, sanitizeCheckoutInput } from "@/lib/payment-security";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
     const forwarded = request.headers.get("x-forwarded-for");
     const ip = forwarded ? forwarded.split(",")[0].trim() : "unknown";
 
-    const rateLimitResult = rateLimiter.check(ip);
+    const rateLimitResult = await rateLimiter.check(ip);
     if (!rateLimitResult.allowed) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
@@ -96,7 +97,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
-    console.error("Error creating checkout session:", error);
+    logger.error("Error creating checkout session:", { error });
     return NextResponse.json(
       { error: "Failed to create checkout session" },
       { status: 500 }

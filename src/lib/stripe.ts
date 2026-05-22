@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { logger } from "@/lib/logger";
 
 // Only create Stripe client if secret key is provided
 export const stripe = process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY !== "sk_test_your_secret_key_here"
@@ -9,18 +10,31 @@ export const stripe = process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET
   : null;
 
 export const PRICES = {
-  proMonthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || "price_pro_monthly",
-  proYearly: process.env.STRIPE_PRO_YEARLY_PRICE_ID || "price_pro_yearly",
-  businessMonthly: process.env.STRIPE_BUSINESS_MONTHLY_PRICE_ID || "price_business_monthly",
-  businessYearly: process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID || "price_business_yearly",
+  proMonthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || "",
+  proYearly: process.env.STRIPE_PRO_YEARLY_PRICE_ID || "",
+  businessMonthly: process.env.STRIPE_BUSINESS_MONTHLY_PRICE_ID || "",
+  businessYearly: process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID || "",
 };
 
 export const CNY_PRICES = {
-  proMonthly: process.env.STRIPE_CNY_PRO_MONTHLY_PRICE_ID || "price_cny_pro_monthly",
-  proYearly: process.env.STRIPE_CNY_PRO_YEARLY_PRICE_ID || "price_cny_pro_yearly",
-  businessMonthly: process.env.STRIPE_CNY_BUSINESS_MONTHLY_PRICE_ID || "price_cny_business_monthly",
-  businessYearly: process.env.STRIPE_CNY_BUSINESS_YEARLY_PRICE_ID || "price_cny_business_yearly",
+  proMonthly: process.env.STRIPE_CNY_PRO_MONTHLY_PRICE_ID || "",
+  proYearly: process.env.STRIPE_CNY_PRO_YEARLY_PRICE_ID || "",
+  businessMonthly: process.env.STRIPE_CNY_BUSINESS_MONTHLY_PRICE_ID || "",
+  businessYearly: process.env.STRIPE_CNY_BUSINESS_YEARLY_PRICE_ID || "",
 };
+
+function validatePriceIds() {
+  if (!stripe) return;
+  const allPrices = { ...PRICES, ...CNY_PRICES };
+  const missing = Object.entries(allPrices)
+    .filter(([, id]) => !id || id.startsWith("price_") === false)
+    .map(([key]) => key);
+  if (missing.length > 0) {
+    logger.warn(`[Stripe] Warning: Missing or invalid price IDs: ${missing.join(", ")}. Stripe checkout may fail.`);
+  }
+}
+
+validatePriceIds();
 
 export const PRICE_TO_PLAN: Record<string, { plan: string; billingPeriod: string }> = {
   [PRICES.proMonthly]: { plan: "pro", billingPeriod: "monthly" },

@@ -8,7 +8,7 @@ import {
 const API_BASE = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis";
 const TASK_URL = "https://dashscope.aliyuncs.com/api/v1/tasks/";
 const POLL_INTERVAL = 2000;
-const MAX_POLL_TIME = 60000;
+const MAX_POLL_TIME = 50000;
 
 const MODELS: ProviderModelInfo[] = [
   {
@@ -70,7 +70,7 @@ async function pollTask(taskId: string, apiKey: string): Promise<string> {
     }
     await new Promise((r) => setTimeout(r, POLL_INTERVAL));
   }
-  throw new Error("任务超时，超过60秒未完成");
+  throw new Error("任务超时，超过50秒未完成");
 }
 
 async function downloadAsDataUrl(url: string): Promise<string> {

@@ -6,6 +6,7 @@ import {
   UserTier,
 } from "./providers/router";
 import { ProviderModelInfo } from "./providers/base";
+import { logger } from "@/lib/logger";
 
 export interface GenerationResult {
   imageUrl: string;
@@ -121,9 +122,9 @@ export const generateImage = async (
   if (isChinese(finalPrompt)) {
     try {
       finalPrompt = await routeTranslate(finalPrompt);
-      console.log("Translated prompt:", finalPrompt);
+      logger.info("Translated prompt:", { finalPrompt });
     } catch (e) {
-      console.error("Translation failed, using original prompt:", e);
+      logger.error("Translation failed, using original prompt:", { error: e });
     }
   }
 

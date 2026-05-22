@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
@@ -23,7 +25,9 @@ export async function POST(request: Request) {
       cancel_at_period_end: true,
     });
 
-    const sub = subscription as any;
+    const sub = subscription as unknown as Stripe.Subscription & {
+      current_period_end: number;
+    };
 
     return NextResponse.json({
       success: true,
@@ -35,7 +39,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Error canceling subscription:", error);
+    logger.error("Error canceling subscription:", { error });
     return NextResponse.json(
       { error: "Failed to cancel subscription" },
       { status: 500 }

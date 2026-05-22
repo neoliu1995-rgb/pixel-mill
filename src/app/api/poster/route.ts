@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { routeCopywriting } from "@/lib/providers/router";
 import { routeGenerate } from "@/lib/providers/router";
 import { getCurrentUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 interface PosterRequest {
   productName: string;
@@ -108,7 +109,7 @@ export async function POST(req: NextRequest) {
       cost: imageResult.cost + (copyResult.cost || 0),
     });
   } catch (error) {
-    console.error("Poster generation error:", error);
+    logger.error("Poster generation error:", { error });
     return NextResponse.json(
       { success: false, error: "海报生成失败，请重试。" },
       { status: 500 }

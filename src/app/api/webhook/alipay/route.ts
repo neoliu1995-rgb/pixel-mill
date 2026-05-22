@@ -3,6 +3,7 @@ import { verifyAlipayNotification } from "@/lib/alipay";
 import { prisma } from "@/lib/prisma";
 import { sendPaymentConfirmationEmail } from "@/lib/email";
 import { CNY_PLANS } from "@/lib/stripe";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
@@ -14,7 +15,7 @@ export async function POST(request: Request) {
 
     const isValid = verifyAlipayNotification(params);
     if (!isValid) {
-      console.error("Alipay notification signature verification failed");
+      logger.error("Alipay notification signature verification failed");
       return new NextResponse("fail", { status: 400 });
     }
 
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
       }
 
       if (!userId) {
-        console.error("No userId found for Alipay trade:", outTradeNo);
+        logger.error("No userId found for Alipay trade:", { outTradeNo });
         return new NextResponse("fail", { status: 400 });
       }
 
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
 
     return new NextResponse("success");
   } catch (error) {
-    console.error("Alipay webhook error:", error);
+    logger.error("Alipay webhook error:", { error });
     return new NextResponse("fail", { status: 500 });
   }
 }

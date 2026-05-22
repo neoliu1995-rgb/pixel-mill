@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import jwt from "jsonwebtoken";
 import { generateApiKey, hashApiKey } from "@/lib/apikey";
+import { logger } from "@/lib/logger";
 
 async function authenticate(request: Request) {
   const authHeader = request.headers.get("Authorization");
@@ -13,6 +14,7 @@ async function authenticate(request: Request) {
   const secret = process.env.JWT_SECRET;
 
   if (!secret) {
+    logger.error("JWT_SECRET is not configured");
     return null;
   }
 
@@ -20,6 +22,7 @@ async function authenticate(request: Request) {
     const decoded = jwt.verify(token, secret) as { userId: string };
     return decoded.userId;
   } catch {
+    logger.warn("JWT verification failed");
     return null;
   }
 }
@@ -68,7 +71,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ keys });
   } catch (error) {
-    console.error("Error fetching API keys:", error);
+    logger.error("Error fetching API keys:", { error });
     return NextResponse.json(
       { error: "Failed to fetch API keys" },
       { status: 500 }
@@ -147,7 +150,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Error creating API key:", error);
+    logger.error("Error creating API key:", { error });
     return NextResponse.json(
       { error: "Failed to create API key" },
       { status: 500 }

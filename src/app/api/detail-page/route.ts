@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SiliconFlowTextProvider } from "@/lib/providers/siliconflow";
 import { getCurrentUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 interface DetailPageRequest {
   productName: string;
@@ -304,7 +305,7 @@ Output ONLY the JSON object, no other text.`,
       cost: 0,
     });
   } catch (error) {
-    console.error("Detail page generation error:", error);
+    logger.error("Detail page generation error:", { error });
     return NextResponse.json(
       { success: false, error: "详情页生成失败，请重试。" },
       { status: 500 }

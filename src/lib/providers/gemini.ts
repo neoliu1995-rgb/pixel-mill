@@ -12,7 +12,7 @@ const MODELS: ProviderModelInfo[] = [
     id: "gemini-2.5-flash-image",
     name: "Gemini 2.5 Flash Image",
     provider: "gemini",
-    tier: "free",
+    tier: "pro",
     quality: 4,
     speed: 4,
     costPerImage: 0,
@@ -35,7 +35,7 @@ const MODELS: ProviderModelInfo[] = [
 ];
 
 const MODEL_API_MAP: Record<string, string> = {
-  "gemini-2.5-flash-image": "gemini-2.5-flash-preview-image-generation",
+  "gemini-2.5-flash-image": "gemini-2.5-flash-image",
   "imagen-4-fast": "imagen-4.0-generate-001",
 };
 

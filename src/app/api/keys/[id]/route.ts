@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import jwt from "jsonwebtoken";
+import { logger } from "@/lib/logger";
 
 async function authenticate(request: Request) {
   const authHeader = request.headers.get("Authorization");
@@ -9,12 +10,17 @@ async function authenticate(request: Request) {
   }
 
   const token = authHeader.substring(7);
-  const secret = process.env.JWT_SECRET || "your-secret-key";
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    logger.error("JWT_SECRET is not configured");
+    return null;
+  }
 
   try {
     const decoded = jwt.verify(token, secret) as { userId: string };
     return decoded.userId;
   } catch {
+    logger.warn("JWT verification failed");
     return null;
   }
 }
@@ -52,7 +58,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting API key:", error);
+    logger.error("Error deleting API key:", { error });
     return NextResponse.json(
       { error: "Failed to delete API key" },
       { status: 500 }

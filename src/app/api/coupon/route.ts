@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
       type: coupon.type,
     });
   } catch (error) {
-    console.error("Coupon validation error:", error);
+    logger.error("Coupon validation error:", { error });
     return NextResponse.json(
       { valid: false, error: "优惠码验证失败，请重试" },
       { status: 500 }

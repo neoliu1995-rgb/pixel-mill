@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { routeRemoveBackground } from "@/lib/providers/router";
 import { addWatermark } from "@/lib/watermark";
 import { getCurrentUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
             try {
               resultUrl = await addWatermark(resultUrl);
             } catch (wmError) {
-              console.error("Watermark error:", wmError);
+              logger.error("Watermark error:", { error: wmError });
             }
           }
           return NextResponse.json({
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
           });
         }
       } catch (err) {
-        console.error("Remove.bg error:", err);
+        logger.error("Remove.bg error:", { error: err });
       }
     }
 
@@ -81,7 +82,7 @@ export async function POST(req: NextRequest) {
         try {
           fallbackUrl = await addWatermark(result.imageUrl);
         } catch (wmError) {
-          console.error("Watermark error:", wmError);
+          logger.error("Watermark error:", { error: wmError });
         }
       }
       return NextResponse.json({
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
         cost: result.cost,
       });
     } catch (routerError) {
-      console.error("Router fallback error:", routerError);
+      logger.error("Router fallback error:", { error: routerError });
       return NextResponse.json(
         {
           error: "AI抠图功能需要配置API密钥，即将上线！",
@@ -102,7 +103,7 @@ export async function POST(req: NextRequest) {
       );
     }
   } catch (error) {
-    console.error("Background removal error:", error);
+    logger.error("Background removal error:", { error });
     return NextResponse.json(
       { error: "图片处理失败：" + (error as Error).message, success: false },
       { status: 500 }
