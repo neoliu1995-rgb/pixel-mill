@@ -18,10 +18,16 @@ const languages = [
   { code: "hi", name: "हिन्दी", flag: "🇮🇳" },
 ];
 
-export default function LanguageSwitcher() {
-  const { language, setLanguage, t } = useLanguage();
+interface LanguageSwitcherProps {
+  variant?: "light" | "dark";
+}
+
+export default function LanguageSwitcher({ variant = "light" }: LanguageSwitcherProps) {
+  const { language, setLanguage } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const isDark = variant === "dark";
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -35,11 +41,24 @@ export default function LanguageSwitcher() {
 
   const currentLang = languages.find((l) => l.code === language) || languages[0];
 
+  const buttonClass = isDark
+    ? "flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors rounded-lg hover:bg-gray-700"
+    : "flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors rounded-lg hover:bg-gray-100";
+
+  const dropdownClass = isDark
+    ? "absolute right-0 mt-2 w-48 bg-gray-800 rounded-xl shadow-lg border border-gray-700 py-2 z-50"
+    : "absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50";
+
+  const itemClass = (isActive: boolean) =>
+    isDark
+      ? `w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-700 transition-colors ${isActive ? "bg-purple-500/20 text-purple-400" : "text-gray-300"}`
+      : `w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${isActive ? "bg-purple-50 text-purple-600" : "text-gray-700"}`;
+
   return (
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors rounded-lg hover:bg-gray-100"
+        className={buttonClass}
       >
         <Globe className="w-4 h-4" />
         <span className="hidden sm:inline">{currentLang.flag} {currentLang.name}</span>
@@ -47,7 +66,7 @@ export default function LanguageSwitcher() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+        <div className={dropdownClass}>
           {languages.map((lang) => (
             <button
               key={lang.code}
@@ -55,9 +74,7 @@ export default function LanguageSwitcher() {
                 setLanguage(lang.code as any);
                 setIsOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
-                language === lang.code ? "bg-purple-50 text-purple-600" : "text-gray-700"
-              }`}
+              className={itemClass(language === lang.code)}
             >
               <span className="text-lg">{lang.flag}</span>
               <span className="flex-1 text-left">{lang.name}</span>

@@ -93,18 +93,32 @@ export default function EffectTool({ effectId, effectName, effectPrompt }: Effec
           clearInterval(progressInterval);
           return 95;
         }
-        return prev + Math.random() * 12;
+        return prev + Math.random() * 8;
       });
     }, 400);
 
     try {
+      let finalPrompt = effectPrompt;
+
+      const analyzeResponse = await fetch("/api/analyze-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: uploadedImage }),
+      });
+
+      if (analyzeResponse.ok) {
+        const analyzeData = await analyzeResponse.json();
+        if (analyzeData.description) {
+          finalPrompt = `The uploaded image shows: ${analyzeData.description}. ${effectPrompt}`;
+        }
+      }
+
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: effectPrompt,
+          prompt: finalPrompt,
           image: uploadedImage,
-          model: "gemini-2.5-flash-image",
           width: 1024,
           height: 1024,
         }),

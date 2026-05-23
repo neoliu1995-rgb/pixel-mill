@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Sparkles, ArrowLeft } from "lucide-react";
 import EffectCard from "@/components/effects/EffectCard";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useLanguage } from "@/components/LanguageProvider";
 
 export default function EffectsPage() {
@@ -60,6 +61,7 @@ export default function EffectsPage() {
             </div>
           </div>
           <nav className="flex items-center gap-4">
+            <LanguageSwitcher variant="dark" />
             <Link
               href="/"
               className="text-sm text-gray-300 hover:text-white transition-colors flex items-center gap-1"
