@@ -98,39 +98,11 @@ export default function EffectTool({ effectId, effectName, effectPrompt }: Effec
     }, 400);
 
     try {
-      let finalPrompt = effectPrompt;
-      let imageDescription = "";
-
-      const analyzeResponse = await fetch("/api/analyze-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: uploadedImage }),
-      });
-
-      if (analyzeResponse.ok) {
-        const analyzeData = await analyzeResponse.json();
-        if (analyzeData.description) {
-          imageDescription = analyzeData.description;
-          finalPrompt = `INPUT IMAGE ANALYSIS: ${imageDescription}
-
-TRANSFORMATION INSTRUCTION: ${effectPrompt}
-
-CRITICAL REQUIREMENTS:
-- You MUST transform the INPUT IMAGE according to the instruction
-- PRESERVE the subject's identity, facial features, hairstyle, and distinctive characteristics
-- MAINTAIN the same pose, composition, and framing as the original photo
-- Apply ONLY the style/effect changes described in the transformation instruction
-- The output should clearly be the SAME person/object from the input image, just with the applied effect`;
-        }
-      } else {
-        finalPrompt = `Transform this photo by applying the following effect: ${effectPrompt}. IMPORTANT: Preserve the identity and key features of the subject in the original image. Maintain the same pose and composition.`;
-      }
-
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: finalPrompt,
+          prompt: effectPrompt,
           image: uploadedImage,
           width: 1024,
           height: 1024,

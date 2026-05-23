@@ -124,11 +124,6 @@ function selectModelForPrompt(
     }
   }
 
-  if (tier === "free") {
-    const pollinationsModel = available.find((m) => m.provider === "pollinations");
-    if (pollinationsModel) return pollinationsModel;
-  }
-
   const chineseModels = available.filter((m) => m.supportsChinese);
   const englishModels = available.filter((m) => !m.supportsChinese || m.quality >= 4);
 
