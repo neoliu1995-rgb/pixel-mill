@@ -17,7 +17,9 @@ export async function POST(req: NextRequest) {
     if (!apiKey) {
       return NextResponse.json({
         description: "",
-        warning: "Gemini API not configured, using generic prompt",
+        subjectType: "unknown",
+        keyFeatures: [],
+        warning: "Gemini API not configured",
       });
     }
 
@@ -35,14 +37,21 @@ export async function POST(req: NextRequest) {
       contents: [{
         parts: [
           {
-            text: `Describe this image in detail in English. Focus on:
-1. Main subject(s) - what is the primary object/person/scene?
-2. Key visual elements - colors, shapes, textures, materials
-3. Composition and layout
-4. Style and mood
-5. Any text or notable features
+            text: `You are analyzing an image for AI transformation. Provide a detailed analysis in this EXACT JSON format (no markdown, no code blocks):
+{
+  "subjectType": "person|animal|object|scene|food|landscape|other",
+  "subjectDescription": "Detailed description of the main subject",
+  "appearance": "Physical appearance details (for person: gender, age range, hair color/style, facial features, clothing, accessories; for object: type, color, material, size)",
+  "poseAndComposition": "Body pose, angle, position in frame, background elements",
+  "colors": "Dominant colors and color palette",
+  "style": "Photographic style, lighting mood, overall aesthetic"
+}
 
-Be concise but comprehensive (2-4 sentences maximum). This description will be used for AI image transformation, so focus on the visual characteristics that should be preserved or transformed.`
+CRITICAL INSTRUCTIONS:
+- For a PERSON: Describe facial structure, eye shape, nose, lips, hairstyle, clothing style and colors, any distinctive features (glasses, jewelry, etc.), body posture, expression
+- Keep descriptions factual and objective
+- Focus on features that MUST be preserved in the transformed image
+- Output ONLY the JSON, nothing else`
           },
           {
             inlineData: {
@@ -53,8 +62,9 @@ Be concise but comprehensive (2-4 sentences maximum). This description will be u
         ],
       }],
       generationConfig: {
-        temperature: 0.2,
-        maxOutputTokens: 300,
+        temperature: 0.1,
+        maxOutputTokens: 500,
+        responseMimeType: "application/json",
       },
     };
 
@@ -67,25 +77,53 @@ Be concise but comprehensive (2-4 sentences maximum). This description will be u
     });
 
     if (!res.ok) {
-      const errText = await res.text();
-      console.error("Image analysis failed:", res.status, errText);
+      console.error("Image analysis failed:", res.status);
       return NextResponse.json({
         description: "",
-        warning: "Analysis failed, using generic prompt",
+        subjectType: "unknown",
+        keyFeatures: [],
+        warning: "Analysis failed",
       });
     }
 
     const data = await res.json();
-    const description = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    if (!description) {
+    if (!rawText) {
       return NextResponse.json({
         description: "",
+        subjectType: "unknown",
+        keyFeatures: [],
         warning: "No description generated",
       });
     }
 
-    return NextResponse.json({ description: description.trim() });
+    let parsed;
+    try {
+      const cleanText = rawText.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+      parsed = JSON.parse(cleanText);
+    } catch {
+      return NextResponse.json({
+        description: rawText.trim(),
+        subjectType: "unknown",
+        keyFeatures: [],
+      });
+    }
+
+    const description = [
+      `Subject: ${parsed.subjectType} - ${parsed.subjectDescription}`,
+      `Appearance: ${parsed.appearance || ""}`,
+      `Pose: ${parsed.poseAndComposition || ""}`,
+      `Colors: ${parsed.colors || ""}`,
+      `Style: ${parsed.style || ""}`,
+    ].filter(Boolean).join(". ");
+
+    return NextResponse.json({
+      description,
+      subjectType: parsed.subjectType || "unknown",
+      keyFeatures: [parsed.appearance, parsed.poseAndComposition, parsed.colors].filter(Boolean),
+      raw: parsed,
+    });
   } catch (error) {
     console.error("Image analysis error:", error);
     return NextResponse.json(

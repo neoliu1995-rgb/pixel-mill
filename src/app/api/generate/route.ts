@@ -27,6 +27,7 @@ export interface GenerationRequest {
   color?: string;
   lighting?: string;
   composition?: string;
+  skipWatermark?: boolean;
 }
 
 export interface GenerationResponse {
@@ -135,6 +136,7 @@ export async function POST(req: NextRequest) {
       color,
       lighting,
       composition,
+      skipWatermark = false,
     }: GenerationRequest = await req.json();
 
     if (requestUserTier && !isAnonymous) {
@@ -241,7 +243,7 @@ export async function POST(req: NextRequest) {
     const totalLatency = Date.now() - startTime;
 
     let finalImageUrl = result.imageUrl;
-    if (userTier === "free") {
+    if (userTier === "free" && !skipWatermark) {
       try {
         finalImageUrl = await addWatermark(result.imageUrl);
       } catch (wmError) {

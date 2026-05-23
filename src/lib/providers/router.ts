@@ -103,7 +103,8 @@ function getAvailableImageProviders(tier: UserTier): RouterModel[] {
 function selectModelForPrompt(
   prompt: string,
   tier: UserTier,
-  preferredModel?: string
+  preferredModel?: string,
+  hasImage?: boolean
 ): RouterModel | null {
   const available = getAvailableImageProviders(tier);
   if (available.length === 0) return null;
@@ -114,6 +115,14 @@ function selectModelForPrompt(
   }
 
   const hasChinese = isChinese(prompt);
+
+  if (hasImage) {
+    const img2ImgModels = available.filter((m) => m.supportsImg2Img && m.isAvailable !== false);
+    if (img2ImgModels.length > 0) {
+      img2ImgModels.sort((a, b) => b.quality - a.quality);
+      return img2ImgModels[0];
+    }
+  }
 
   if (tier === "free") {
     const pollinationsModel = available.find((m) => m.provider === "pollinations");
@@ -137,7 +146,7 @@ export async function routeGenerate(
   tier: UserTier = "free",
   preferredModel?: string
 ): Promise<ProviderImageResult> {
-  const selected = selectModelForPrompt(options.prompt, tier, preferredModel);
+  const selected = selectModelForPrompt(options.prompt, tier, preferredModel, !!options.image);
   if (!selected) {
     const pollinations = new PollinationsProvider();
     return pollinations.generate(options);

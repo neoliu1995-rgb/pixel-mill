@@ -99,6 +99,7 @@ export default function EffectTool({ effectId, effectName, effectPrompt }: Effec
 
     try {
       let finalPrompt = effectPrompt;
+      let imageDescription = "";
 
       const analyzeResponse = await fetch("/api/analyze-image", {
         method: "POST",
@@ -109,8 +110,20 @@ export default function EffectTool({ effectId, effectName, effectPrompt }: Effec
       if (analyzeResponse.ok) {
         const analyzeData = await analyzeResponse.json();
         if (analyzeData.description) {
-          finalPrompt = `The uploaded image shows: ${analyzeData.description}. ${effectPrompt}`;
+          imageDescription = analyzeData.description;
+          finalPrompt = `INPUT IMAGE ANALYSIS: ${imageDescription}
+
+TRANSFORMATION INSTRUCTION: ${effectPrompt}
+
+CRITICAL REQUIREMENTS:
+- You MUST transform the INPUT IMAGE according to the instruction
+- PRESERVE the subject's identity, facial features, hairstyle, and distinctive characteristics
+- MAINTAIN the same pose, composition, and framing as the original photo
+- Apply ONLY the style/effect changes described in the transformation instruction
+- The output should clearly be the SAME person/object from the input image, just with the applied effect`;
         }
+      } else {
+        finalPrompt = `Transform this photo by applying the following effect: ${effectPrompt}. IMPORTANT: Preserve the identity and key features of the subject in the original image. Maintain the same pose and composition.`;
       }
 
       const response = await fetch("/api/generate", {
@@ -121,6 +134,7 @@ export default function EffectTool({ effectId, effectName, effectPrompt }: Effec
           image: uploadedImage,
           width: 1024,
           height: 1024,
+          skipWatermark: true,
         }),
       });
 
