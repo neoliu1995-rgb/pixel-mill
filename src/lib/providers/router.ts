@@ -42,7 +42,7 @@ class PollinationsProvider implements ImageProvider {
   async generate(options: ProviderGenerateOptions): Promise<ProviderImageResult> {
     const { prompt, width = 1024, height = 1024, negativePrompt, image } = options;
     const encodedPrompt = encodeURIComponent(prompt);
-    const negativeParam = negativePrompt ? `&negative=${encodeURIComponent(negativeParam)}` : "";
+    const negativeParam = negativePrompt ? `&negative=${encodeURIComponent(negativePrompt)}` : "";
 
     let apiUrl: string;
     if (image && (image.startsWith("http://") || image.startsWith("https://"))) {
