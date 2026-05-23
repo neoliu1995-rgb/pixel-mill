@@ -117,7 +117,7 @@ function selectModelForPrompt(
   const hasChinese = isChinese(prompt);
 
   if (hasImage) {
-    const img2ImgModels = available.filter((m) => m.supportsImg2Img && m.isAvailable !== false);
+    const img2ImgModels = available.filter((m) => m.supportsImg2Img);
     if (img2ImgModels.length > 0) {
       img2ImgModels.sort((a, b) => b.quality - a.quality);
       return img2ImgModels[0];
