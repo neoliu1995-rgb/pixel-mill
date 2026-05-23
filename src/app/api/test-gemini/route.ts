@@ -42,7 +42,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, ...results });
   } catch (error) {
-    results.push(`Exception: ${error instanceof Error ? error.message : String(error)}`);
+    results.steps.push(`Exception: ${error instanceof Error ? error.message : String(error)}`);
     return NextResponse.json({ success: false, ...results }, { status: 500 });
   }
 }
