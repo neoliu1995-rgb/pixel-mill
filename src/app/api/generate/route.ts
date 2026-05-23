@@ -94,19 +94,19 @@ export async function POST(req: NextRequest) {
     let userTier: "free" | "pro" | "business";
 
     if (isAnonymous) {
-      const ipRateLimit = await rateLimiter.check(`gen:${ip}`, 10, 60_000);
+      const ipRateLimit = await rateLimiter.check(`gen2:${ip}`, 5, 60_000);
       if (!ipRateLimit.allowed) {
         return NextResponse.json(
-          { error: "Too many requests. Please sign in for more generations.", needAuth: true },
+          { error: "请求过于频繁，请稍后再试。登录后可获得更多次数。", needAuth: true },
           { status: 429 }
         );
       }
 
-      const dailyRateLimit = await rateLimiter.check(`gen-daily:${ip}`, 10, 86_400_000);
+      const dailyRateLimit = await rateLimiter.check(`gen2-daily:${ip}`, 50, 86_400_000);
       if (!dailyRateLimit.allowed) {
         return NextResponse.json(
           {
-            error: "Daily free limit reached. Sign in to get more generations!",
+            error: "今日免费次数已用完。登录后可获取更多生成次数！",
             quotaExceeded: true,
             quotaType: "daily",
             needAuth: true,
