@@ -231,10 +231,23 @@ export async function POST(req: NextRequest) {
       await new Promise((resolve) => setTimeout(resolve, 2000));
     }
 
-    logger.info("About to call generateImage", { prompt: prompt?.substring(0, 50), width, height, model, userTier });
+    let processedImage = image;
+    if (image && image.startsWith("data:")) {
+      try {
+        const uploadedUrl = await uploadImage(image, isAnonymous ? "anon" : userId);
+        if (uploadedUrl && (uploadedUrl.startsWith("http://") || uploadedUrl.startsWith("https://"))) {
+          processedImage = uploadedUrl;
+          logger.info("Image uploaded to R2 for img2img", { url: uploadedUrl.substring(0, 80) });
+        }
+      } catch (uploadErr) {
+        logger.error("R2 upload failed, using text-only mode", { error: uploadErr });
+      }
+    }
+
+    logger.info("About to call generateImage", { prompt: prompt?.substring(0, 50), width, height, model, userTier, hasImageUrl: !!processedImage });
 
     const result: GenerationResult = await generateImage(
-      { prompt, width, height, model, image, negativePrompt, style, color, lighting, composition },
+      { prompt, width, height, model, image: processedImage, negativePrompt, style, color, lighting, composition },
       userTier
     );
 

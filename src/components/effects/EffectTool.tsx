@@ -122,6 +122,7 @@ export default function EffectTool({ effectId, effectName, effectPrompt }: Effec
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: finalPrompt,
+          image: uploadedImage,
           width: 1024,
           height: 1024,
           skipWatermark: true,

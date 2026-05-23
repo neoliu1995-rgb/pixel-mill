@@ -26,12 +26,12 @@ class PollinationsProvider implements ImageProvider {
       name: "FLUX.1 Schnell",
       provider: "pollinations",
       tier: "free",
-      quality: 2,
+      quality: 3,
       speed: 4,
       costPerImage: 0,
       supportsImg2Img: true,
       supportsChinese: false,
-      bestFor: ["快速出图", "概念验证"],
+      bestFor: ["快速出图", "图生图", "Effects 特效"],
     },
   ];
 
@@ -40,13 +40,19 @@ class PollinationsProvider implements ImageProvider {
   }
 
   async generate(options: ProviderGenerateOptions): Promise<ProviderImageResult> {
-    const { prompt, width = 1024, height = 1024, negativePrompt } = options;
+    const { prompt, width = 1024, height = 1024, negativePrompt, image } = options;
     const encodedPrompt = encodeURIComponent(prompt);
-    const negativeParam = negativePrompt ? `&negative=${encodeURIComponent(negativePrompt)}` : "";
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&nologo=true&model=flux-schnell${negativeParam}`;
+    const negativeParam = negativePrompt ? `&negative=${encodeURIComponent(negativeParam)}` : "";
+
+    let apiUrl: string;
+    if (image && (image.startsWith("http://") || image.startsWith("https://"))) {
+      apiUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&nologo=true&model=flux-schnell${negativeParam}&image=${encodeURIComponent(image)}`;
+    } else {
+      apiUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&nologo=true&model=flux-schnell${negativeParam}`;
+    }
 
     const startTime = Date.now();
-    const response = await fetch(imageUrl);
+    const response = await fetch(apiUrl);
     if (!response.ok) {
       throw new Error(`Pollinations 请求失败: ${response.status}`);
     }
