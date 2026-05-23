@@ -98,12 +98,30 @@ export default function EffectTool({ effectId, effectName, effectPrompt }: Effec
     }, 400);
 
     try {
+      let finalPrompt = effectPrompt;
+
+      try {
+        const analyzeResponse = await fetch("/api/analyze-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: uploadedImage }),
+        });
+
+        if (analyzeResponse.ok) {
+          const analyzeData = await analyzeResponse.json();
+          if (analyzeData.description) {
+            finalPrompt = `Based on a photo of: ${analyzeData.description}. Apply this transformation: ${effectPrompt}. Keep the same subject, pose and composition.`;
+          }
+        }
+      } catch {
+        finalPrompt = `Apply this photo effect: ${effectPrompt}`;
+      }
+
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: effectPrompt,
-          image: uploadedImage,
+          prompt: finalPrompt,
           width: 1024,
           height: 1024,
           skipWatermark: true,

@@ -40,16 +40,10 @@ class PollinationsProvider implements ImageProvider {
   }
 
   async generate(options: ProviderGenerateOptions): Promise<ProviderImageResult> {
-    const { prompt, width = 1024, height = 1024, negativePrompt, image } = options;
+    const { prompt, width = 1024, height = 1024, negativePrompt } = options;
     const encodedPrompt = encodeURIComponent(prompt);
     const negativeParam = negativePrompt ? `&negative=${encodeURIComponent(negativePrompt)}` : "";
-
-    let imageUrl: string;
-    if (image) {
-      imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&nologo=true&model=flux-schnell${negativeParam}&image=${encodeURIComponent(image)}`;
-    } else {
-      imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&nologo=true&model=flux-schnell${negativeParam}`;
-    }
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&nologo=true&model=flux-schnell${negativeParam}`;
 
     const startTime = Date.now();
     const response = await fetch(imageUrl);
