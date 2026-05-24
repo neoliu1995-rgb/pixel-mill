@@ -538,9 +538,9 @@ export default function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
             <Link href="/effects/chibi" className="group">
               <div className="bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 hover:border-purple-500 transition-all hover:shadow-lg hover:shadow-purple-500/20 hover:-translate-y-1 duration-300">
-                <div className="relative h-36 sm:h-48 overflow-hidden">
+                <div className="relative h-36 sm:h-48 overflow-hidden bg-gradient-to-br from-pink-400 via-purple-500 to-indigo-600">
                   <Image
-                    src={`https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=${encodeURIComponent("A cute chibi-style anime girl with big sparkling eyes, pastel pink and purple colors, adorable kawaii art style, soft lighting, white background, high quality illustration")}&image_size=landscape_4_3`}
+                    src={`https://image.pollinations.ai/prompt/A%20cute%20chibi-style%20anime%20girl%20with%20big%20sparkling%20eyes,%20pastel%20pink%20and%20purple%20colors,%20adorable%20kawaii%20art%20style,%20soft%20lighting,%20white%20background,%20high%20quality%20illustration?width=512&height=384&nologo=true&seed=chibi1`}
                     alt="Chibi Effect"
                     fill
                     className="object-cover group-hover:scale-110 transition-transform duration-500"
@@ -563,9 +563,9 @@ export default function HomePage() {
             </Link>
             <Link href="/effects/caricature" className="group">
               <div className="bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 hover:border-purple-500 transition-all hover:shadow-lg hover:shadow-purple-500/20 hover:-translate-y-1 duration-300">
-                <div className="relative h-36 sm:h-48 overflow-hidden">
+                <div className="relative h-36 sm:h-48 overflow-hidden bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500">
                   <Image
-                    src={`https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=${encodeURIComponent("A humorous colorful caricature portrait of a person with exaggerated facial features, vibrant cartoon style, fun and playful, detailed illustration, white background")}&image_size=landscape_4_3`}
+                    src={`https://image.pollinations.ai/prompt/A%20humorous%20colorful%20caricature%20portrait%20of%20a%20person%20with%20exaggerated%20facial%20features,%20vibrant%20cartoon%20style,%20fun%20and%20playful,%20detailed%20illustration,%20white%20background?width=512&height=384&nologo=true&seed=caricature1`}
                     alt="Caricature Effect"
                     fill
                     className="object-cover group-hover:scale-110 transition-transform duration-500"
@@ -588,9 +588,9 @@ export default function HomePage() {
             </Link>
             <Link href="/effects/retro-film" className="group">
               <div className="bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 hover:border-purple-500 transition-all hover:shadow-lg hover:shadow-purple-500/20 hover:-translate-y-1 duration-300">
-                <div className="relative h-36 sm:h-48 overflow-hidden">
+                <div className="relative h-36 sm:h-48 overflow-hidden bg-gradient-to-br from-amber-600 via-yellow-700 to-stone-800">
                   <Image
-                    src={`https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=${encodeURIComponent("Vintage 35mm film photograph of a beautiful landscape, light leaks, film grain texture, warm golden tones, nostalgic 1970s retro aesthetic, faded colors, cinematic")}&image_size=landscape_4_3`}
+                    src={`https://image.pollinations.ai/prompt/Vintage%2035mm%20film%20photograph%20of%20a%20beautiful%20landscape,%20light%20leaks,%20film%20grain%20texture,%20warm%20golden%20tones,%20nostalgic%201970s%20retro%20aesthetic,%20faded%20colors,%20cinematic?width=512&height=384&nologo=true&seed=retrofilm1`}
                     alt="Retro Film Effect"
                     fill
                     className="object-cover group-hover:scale-110 transition-transform duration-500"
