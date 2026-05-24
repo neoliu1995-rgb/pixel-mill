@@ -506,9 +506,21 @@ export default function BackgroundRemoverPage() {
                       <h4 className="text-lg font-semibold text-white mb-2">
                         {processingStatus || t.bgRemover.processing}
                       </h4>
-                      <p className="text-sm text-gray-400">
-                        Usually takes 5-15 seconds
+                      <p className="text-sm text-gray-400 mb-4">
+                        {processingStatus.includes("browser")
+                          ? "This may take 1-3 minutes. Please don't close the page."
+                          : "Usually takes 5-15 seconds. Please wait..."}
                       </p>
+                      <div className="bg-gray-800/60 rounded-lg px-4 py-3 text-left">
+                        <p className="text-xs text-gray-400 flex items-start gap-2">
+                          <span className="text-yellow-400 mt-0.5">💡</span>
+                          <span>
+                            {processingStatus.includes("browser")
+                              ? "Browser processing is slower. For faster results, please try again later when cloud AI is available."
+                              : "The AI is analyzing your image and removing the background. Your result will appear here automatically."}
+                          </span>
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ) : (
