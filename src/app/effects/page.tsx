@@ -34,14 +34,6 @@ export default function EffectsPage() {
         "A 1990s Polaroid style portrait with heavy film grain, slight blur around the edges, faded colors, faint yellow light leak from the corner, nostalgic warm tones, vintage photography",
       badge: "Instant",
     },
-    {
-      id: "pet-human",
-      name: t.effects.petHuman,
-      description: t.effects.petHumanDesc,
-      previewPrompt:
-        "A human character version of a cute pet, maintaining the pet's distinctive features and personality as human traits, portrait style, detailed and expressive, fantasy art",
-      badge: "AI",
-    },
   ];
 
   return (

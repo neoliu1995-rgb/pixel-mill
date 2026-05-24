@@ -45,14 +45,6 @@ export default function EffectPage() {
       mode: "filter",
       badge: "Instant",
     },
-    "pet-human": {
-      name: t.effects.petHuman,
-      description: t.effects.petHumanDesc,
-      prompt:
-        "Transform this pet into a human character version, maintaining the pet's distinctive features and personality as human traits, portrait style, detailed and expressive",
-      mode: "ai",
-      badge: "AI",
-    },
   };
 
   const config = effectConfig[effectId];

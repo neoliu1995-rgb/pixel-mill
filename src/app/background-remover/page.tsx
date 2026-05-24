@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -13,61 +13,93 @@ import {
   X,
   Check,
   Sparkles,
-  ArrowRight,
   Palette,
-  Wand2
+  Wand2,
+  Zap,
 } from "lucide-react";
+
+type ToolType = "remove-bg" | "white-bg" | "custom-bg";
 
 export default function BackgroundRemoverPage() {
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
+  const [transparentImage, setTransparentImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeTool, setActiveTool] = useState<"remove-bg" | "white-bg" | "custom-bg" | null>(null);
+  const [activeTool, setActiveTool] = useState<ToolType | null>(null);
   const [customColor, setCustomColor] = useState("#FFFFFF");
   const [error, setError] = useState<string | null>(null);
   const [processingProgress, setProcessingProgress] = useState(0);
-  const [showAnimation, setShowAnimation] = useState(false);
+  const [modelLoaded, setModelLoaded] = useState(false);
+
+  const handleFile = useCallback((file: File) => {
+    if (!file.type.startsWith("image/")) {
+      setError(t.bgRemover.error.invalidFile);
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError(t.bgRemover.error.fileTooLarge);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      setUploadedImage(result);
+      setProcessedImage(null);
+      setTransparentImage(null);
+      setError(null);
+      setModelLoaded(false);
+    };
+    reader.readAsDataURL(file);
+  }, [t.bgRemover.error.invalidFile, t.bgRemover.error.fileTooLarge]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith("image/")) {
-        setError(t.bgRemover.error.invalidFile);
-        return;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        setError(t.bgRemover.error.fileTooLarge);
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        setUploadedImage(result);
-        setProcessedImage(null);
-        setError(null);
-      };
-      reader.readAsDataURL(file);
-    }
+    if (file) handleFile(file);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        setUploadedImage(result);
-        setProcessedImage(null);
-        setError(null);
-      };
-      reader.readAsDataURL(file);
-    }
+    if (file) handleFile(file);
   };
 
-  const processImage = async (toolType: "remove-bg" | "white-bg" | "custom-bg", color?: string) => {
+  const removeBackground = async (imageSrc: string): Promise<string> => {
+    const { removeBackground } = await import("@imgly/background-removal");
+    const blob = await removeBackground(imageSrc, {
+      progress: (key: string, current: number, total: number) => {
+        if (key === "compute:inference") {
+          const pct = Math.round((current / total) * 100);
+          setProcessingProgress(30 + pct * 0.6);
+        }
+      },
+    });
+    return URL.createObjectURL(blob);
+  };
+
+  const applyBackgroundColor = (transparentSrc: string, color: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new window.Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d")!;
+
+        ctx.fillStyle = color;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror = reject;
+      img.src = transparentSrc;
+    });
+  };
+
+  const processImage = async (toolType: ToolType, color?: string) => {
     if (!uploadedImage) {
       setError(t.bgRemover.error.pleaseUpload);
       return;
@@ -76,62 +108,39 @@ export default function BackgroundRemoverPage() {
     setIsProcessing(true);
     setError(null);
     setActiveTool(toolType);
-    setShowAnimation(true);
-    setProcessingProgress(0);
-
-    const progressInterval = setInterval(() => {
-      setProcessingProgress(prev => {
-        if (prev >= 95) {
-          clearInterval(progressInterval);
-          return 95;
-        }
-        return prev + Math.random() * 15;
-      });
-    }, 200);
+    setProcessingProgress(5);
 
     try {
-      let apiUrl = "/api/remove-background";
-      let body: { imageUrl: string; bgColor?: string } = { imageUrl: uploadedImage };
+      let transparent = transparentImage;
 
-      if (toolType === "white-bg") {
-        apiUrl = "/api/white-background";
-      } else if (toolType === "custom-bg" && color) {
-        apiUrl = "/api/white-background";
-        body.bgColor = color;
+      if (!transparent) {
+        setProcessingProgress(10);
+        transparent = await removeBackground(uploadedImage);
+        setTransparentImage(transparent);
+        setModelLoaded(true);
       }
 
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      setProcessingProgress(90);
 
-      clearInterval(progressInterval);
-      setProcessingProgress(100);
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        if (data.needsApiKey) {
-          setError("AI抠图功能需要配置API密钥，即将上线！");
-        } else {
-          throw new Error(data.error || t.bgRemover.error.processingFailed);
-        }
-        return;
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setProcessedImage(data.imageUrl);
-      setShowAnimation(false);
-    } catch (err) {
-      clearInterval(progressInterval);
-      const message = (err as Error).message;
-      if (message.includes("均不可用") || message.includes("API")) {
-        setError("AI抠图功能需要配置API密钥，即将上线！");
+      if (toolType === "remove-bg") {
+        const response = await fetch(transparent);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        const dataUrl = await new Promise<string>((resolve) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+        setProcessedImage(dataUrl);
       } else {
-        setError(message);
+        const bgColor = toolType === "white-bg" ? "#FFFFFF" : (color || "#FFFFFF");
+        const result = await applyBackgroundColor(transparent, bgColor);
+        setProcessedImage(result);
       }
-      setShowAnimation(false);
+
+      setProcessingProgress(100);
+    } catch (err) {
+      const message = (err as Error).message;
+      setError(message || t.bgRemover.error.processingFailed);
     } finally {
       setIsProcessing(false);
       setActiveTool(null);
@@ -149,7 +158,9 @@ export default function BackgroundRemoverPage() {
   const handleClear = () => {
     setUploadedImage(null);
     setProcessedImage(null);
+    setTransparentImage(null);
     setError(null);
+    setModelLoaded(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -162,7 +173,6 @@ export default function BackgroundRemoverPage() {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      {/* Header */}
       <header className="bg-gray-800/90 backdrop-blur-md border-b border-gray-700 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -170,7 +180,12 @@ export default function BackgroundRemoverPage() {
               <Scissors className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">{t.bgRemover.title}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-white">{t.bgRemover.title}</h1>
+                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-green-500/20 text-green-400 border border-green-500/30 flex items-center gap-1">
+                  <Zap className="w-3 h-3" />Client-side
+                </span>
+              </div>
               <p className="text-xs text-gray-400">{t.bgRemover.subtitle}</p>
             </div>
           </div>
@@ -183,10 +198,9 @@ export default function BackgroundRemoverPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-12">
-        {/* Hero Section */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/20 text-purple-400 rounded-full text-sm font-medium mb-4">
-            <Sparkles className="w-4 h-4" />
+            <Wand2 className="w-4 h-4" />
             {t.bgRemover.heroTitle}
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
@@ -195,11 +209,17 @@ export default function BackgroundRemoverPage() {
           <p className="text-gray-400 max-w-2xl mx-auto">
             {t.bgRemover.heroDescription}
           </p>
+          <div className="mt-4 flex justify-center">
+            <div className="flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-xl">
+              <Zap className="w-4 h-4 text-green-400" />
+              <p className="text-sm text-green-300">
+                100% client-side processing — your images never leave your browser!
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Main Content */}
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Upload Section */}
           <div className="space-y-6">
             <div className="bg-gray-800 rounded-2xl shadow-lg border border-gray-700 overflow-hidden">
               <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
@@ -256,7 +276,6 @@ export default function BackgroundRemoverPage() {
             </div>
           </div>
 
-          {/* Tools Section */}
           <div className="space-y-6">
             <div className="bg-gray-800 rounded-2xl shadow-lg border border-gray-700 overflow-hidden">
               <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-4">
@@ -268,14 +287,13 @@ export default function BackgroundRemoverPage() {
               <div className="p-6">
                 {uploadedImage ? (
                   <div className="space-y-6">
-                    {/* Tool Buttons */}
                     <div className="grid grid-cols-3 gap-3">
                       <button
                         onClick={() => processImage("remove-bg")}
                         disabled={isProcessing}
                         className={`relative flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-300 ${
-                          activeTool === "remove-bg" 
-                            ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30 scale-105" 
+                          activeTool === "remove-bg"
+                            ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30 scale-105"
                             : "bg-gray-700 text-gray-300 hover:bg-purple-600/50 hover:shadow-md"
                         } ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
                       >
@@ -290,8 +308,8 @@ export default function BackgroundRemoverPage() {
                         onClick={() => processImage("white-bg")}
                         disabled={isProcessing}
                         className={`relative flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-300 ${
-                          activeTool === "white-bg" 
-                            ? "bg-green-600 text-white shadow-lg shadow-green-600/30 scale-105" 
+                          activeTool === "white-bg"
+                            ? "bg-green-600 text-white shadow-lg shadow-green-600/30 scale-105"
                             : "bg-gray-700 text-gray-300 hover:bg-green-600/50 hover:shadow-md"
                         } ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
                       >
@@ -306,8 +324,8 @@ export default function BackgroundRemoverPage() {
                         onClick={() => processImage("custom-bg", customColor)}
                         disabled={isProcessing}
                         className={`relative flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-300 ${
-                          activeTool === "custom-bg" 
-                            ? "bg-orange-600 text-white shadow-lg shadow-orange-600/30 scale-105" 
+                          activeTool === "custom-bg"
+                            ? "bg-orange-600 text-white shadow-lg shadow-orange-600/30 scale-105"
                             : "bg-gray-700 text-gray-300 hover:bg-orange-600/50 hover:shadow-md"
                         } ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
                       >
@@ -319,7 +337,15 @@ export default function BackgroundRemoverPage() {
                       </button>
                     </div>
 
-                    {/* Custom Color Picker */}
+                    {modelLoaded && (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg">
+                        <Check className="w-4 h-4 text-green-400" />
+                        <p className="text-xs text-green-300">
+                          AI model loaded — switching backgrounds is instant now!
+                        </p>
+                      </div>
+                    )}
+
                     <div className="bg-gray-700 rounded-xl p-4">
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-sm font-medium text-gray-300">{t.bgRemover.selectBgColor}</span>
@@ -352,15 +378,11 @@ export default function BackgroundRemoverPage() {
                       </div>
                     </div>
 
-                    {/* Processing Animation */}
-                    {isProcessing && showAnimation && (
+                    {isProcessing && (
                       <div className="relative bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-xl p-6 overflow-hidden border border-purple-500/20">
-                        <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent)] animate-shimmer" />
-                        <div className="relative text-center">
+                        <div className="text-center">
                           <div className="w-16 h-16 mx-auto mb-4 relative">
                             <div className="absolute inset-0 bg-purple-500 rounded-full animate-ping opacity-30" />
-                            <div className="absolute inset-0 bg-purple-600 rounded-full animate-ping opacity-20 delay-100" />
-                            <div className="absolute inset-0 bg-purple-700 rounded-full animate-ping opacity-10 delay-200" />
                             <div className="relative w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
                               <Loader2 className="w-8 h-8 text-white animate-spin" />
                             </div>
@@ -369,10 +391,12 @@ export default function BackgroundRemoverPage() {
                             {t.bgRemover.processing}
                           </h4>
                           <p className="text-sm text-gray-400 mb-4">
-                            {t.bgRemover.identifying}
+                            {!modelLoaded
+                              ? "Loading AI model (first time only)..."
+                              : t.bgRemover.identifying}
                           </p>
                           <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
-                            <div 
+                            <div
                               className="bg-gradient-to-r from-purple-500 to-pink-500 h-full rounded-full transition-all duration-300 ease-out"
                               style={{ width: `${processingProgress}%` }}
                             />
@@ -385,14 +409,8 @@ export default function BackgroundRemoverPage() {
                     )}
 
                     {error && (
-                      <div className={`p-4 rounded-xl border ${
-                        error.includes("即将上线")
-                          ? "bg-amber-500/20 border-amber-500/30"
-                          : "bg-red-500/20 border-red-500/30"
-                      }`}>
-                        <p className={`text-sm ${
-                          error.includes("即将上线") ? "text-amber-400" : "text-red-400"
-                        }`}>{error}</p>
+                      <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-xl">
+                        <p className="text-sm text-red-400">{error}</p>
                       </div>
                     )}
                   </div>
@@ -407,7 +425,6 @@ export default function BackgroundRemoverPage() {
               </div>
             </div>
 
-            {/* Result Section */}
             {processedImage && (
               <div className="bg-gray-800 rounded-2xl shadow-lg border border-gray-700 overflow-hidden">
                 <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4">
@@ -446,7 +463,6 @@ export default function BackgroundRemoverPage() {
           </div>
         </div>
 
-        {/* Features Section */}
         <div className="mt-16 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             { key: "fast", icon: "⚡" },
@@ -470,16 +486,6 @@ export default function BackgroundRemoverPage() {
           </p>
         </div>
       </footer>
-
-      <style>{`
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-        .animate-shimmer {
-          animation: shimmer 2s infinite;
-        }
-      `}</style>
     </div>
   );
 }
