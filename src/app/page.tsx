@@ -537,9 +537,19 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
             <Link href="/effects/chibi" className="group">
-              <div className="bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 hover:border-purple-500 transition-all hover:shadow-lg hover:shadow-purple-500/20">
-                <div className="h-36 sm:h-48 flex items-center justify-center bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-500">
-                  <span className="text-white text-lg font-bold">Chibi</span>
+              <div className="bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 hover:border-purple-500 transition-all hover:shadow-lg hover:shadow-purple-500/20 hover:-translate-y-1 duration-300">
+                <div className="relative h-36 sm:h-48 overflow-hidden">
+                  <Image
+                    src={`https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=${encodeURIComponent("A cute chibi-style anime girl with big sparkling eyes, pastel pink and purple colors, adorable kawaii art style, soft lighting, white background, high quality illustration")}&image_size=landscape_4_3`}
+                    alt="Chibi Effect"
+                    fill
+                    className="object-cover group-hover:scale-110 transition-transform duration-500"
+                    sizes="(max-width: 640px) 100vw, 33vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/30 to-transparent" />
+                  <div className="absolute top-3 left-3 px-2.5 py-1 bg-pink-500/90 text-white text-xs font-bold rounded-full backdrop-blur-sm">
+                    ✨ Chibi
+                  </div>
                 </div>
                 <div className="p-4 sm:p-5">
                   <h3 className="font-semibold text-white mb-1">{t.effects.chibi}</h3>
@@ -552,9 +562,19 @@ export default function HomePage() {
               </div>
             </Link>
             <Link href="/effects/caricature" className="group">
-              <div className="bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 hover:border-purple-500 transition-all hover:shadow-lg hover:shadow-purple-500/20">
-                <div className="h-36 sm:h-48 flex items-center justify-center bg-gradient-to-br from-yellow-500 via-orange-500 to-red-500">
-                  <span className="text-white text-lg font-bold">Caricature</span>
+              <div className="bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 hover:border-purple-500 transition-all hover:shadow-lg hover:shadow-purple-500/20 hover:-translate-y-1 duration-300">
+                <div className="relative h-36 sm:h-48 overflow-hidden">
+                  <Image
+                    src={`https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=${encodeURIComponent("A humorous colorful caricature portrait of a person with exaggerated facial features, vibrant cartoon style, fun and playful, detailed illustration, white background")}&image_size=landscape_4_3`}
+                    alt="Caricature Effect"
+                    fill
+                    className="object-cover group-hover:scale-110 transition-transform duration-500"
+                    sizes="(max-width: 640px) 100vw, 33vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/30 to-transparent" />
+                  <div className="absolute top-3 left-3 px-2.5 py-1 bg-orange-500/90 text-white text-xs font-bold rounded-full backdrop-blur-sm">
+                    🎨 Caricature
+                  </div>
                 </div>
                 <div className="p-4 sm:p-5">
                   <h3 className="font-semibold text-white mb-1">{t.effects.caricature}</h3>
@@ -567,9 +587,19 @@ export default function HomePage() {
               </div>
             </Link>
             <Link href="/effects/retro-film" className="group">
-              <div className="bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 hover:border-purple-500 transition-all hover:shadow-lg hover:shadow-purple-500/20">
-                <div className="h-36 sm:h-48 flex items-center justify-center bg-gradient-to-br from-amber-600 via-yellow-700 to-stone-800">
-                  <span className="text-white text-lg font-bold">Retro Film</span>
+              <div className="bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 hover:border-purple-500 transition-all hover:shadow-lg hover:shadow-purple-500/20 hover:-translate-y-1 duration-300">
+                <div className="relative h-36 sm:h-48 overflow-hidden">
+                  <Image
+                    src={`https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=${encodeURIComponent("Vintage 35mm film photograph of a beautiful landscape, light leaks, film grain texture, warm golden tones, nostalgic 1970s retro aesthetic, faded colors, cinematic")}&image_size=landscape_4_3`}
+                    alt="Retro Film Effect"
+                    fill
+                    className="object-cover group-hover:scale-110 transition-transform duration-500"
+                    sizes="(max-width: 640px) 100vw, 33vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/30 to-transparent" />
+                  <div className="absolute top-3 left-3 px-2.5 py-1 bg-amber-600/90 text-white text-xs font-bold rounded-full backdrop-blur-sm">
+                    📽️ Retro Film
+                  </div>
                 </div>
                 <div className="p-4 sm:p-5">
                   <h3 className="font-semibold text-white mb-1">{t.effects.retroFilm}</h3>

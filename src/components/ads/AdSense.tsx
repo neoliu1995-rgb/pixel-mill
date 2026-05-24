@@ -22,7 +22,7 @@ interface AdSenseProps {
 export default function AdSense({
   slot,
   format = "auto",
-  layout = "in-article",
+  layout,
   layoutKey,
   className = "w-full h-auto",
 }: AdSenseProps) {
@@ -54,6 +54,7 @@ export default function AdSense({
         data-ad-slot={slot}
         data-ad-format={format}
         data-full-width-responsive="true"
+        {...(layout && { "data-ad-layout": layout })}
         {...(layoutKey && { "data-ad-layout-key": layoutKey })}
       />
     </div>
