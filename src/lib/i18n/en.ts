@@ -409,6 +409,8 @@ const en = {
       processing: "AI Processing...",
       identifying: "Identifying subject and removing background",
       processingComplete: "Processing Complete",
+      resultSection: "Result",
+      generateButton: "Generate Image",
       downloadImage: "Download Image",
       processNewImage: "Process New Image",
       pleaseUpload: "Please upload an image to start processing",

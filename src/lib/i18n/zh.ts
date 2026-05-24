@@ -409,6 +409,8 @@ const zh = {
       processing: "AI正在处理中...",
       identifying: "正在识别主体并移除背景",
       processingComplete: "处理完成",
+      resultSection: "处理结果",
+      generateButton: "生成图片",
       downloadImage: "下载图片",
       processNewImage: "处理新图片",
       pleaseUpload: "请先上传图片开始处理",
