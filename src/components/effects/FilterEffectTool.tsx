@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import {
   Upload,
@@ -11,35 +11,32 @@ import {
   Share2,
   Check,
   Image as ImageIcon,
+  Zap,
 } from "lucide-react";
 import { useLanguage } from "@/components/LanguageProvider";
+import { applyFilter } from "@/lib/imageFilters";
 
-interface EffectToolProps {
+interface FilterEffectToolProps {
   effectId: string;
   effectName: string;
-  effectPrompt: string;
 }
 
-export default function EffectTool({ effectId, effectName, effectPrompt }: EffectToolProps) {
+export default function FilterEffectTool({ effectId, effectName }: FilterEffectToolProps) {
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0);
   const [copied, setCopied] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
       setError(t.effectsPage.errorInvalidFile);
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > 10 * 1024 * 1024) {
       setError(t.effectsPage.errorFileTooLarge);
       return;
     }
@@ -52,31 +49,18 @@ export default function EffectTool({ effectId, effectName, effectPrompt }: Effec
       setError(null);
     };
     reader.readAsDataURL(file);
+  }, [t.effectsPage.errorInvalidFile, t.effectsPage.errorFileTooLarge]);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
     const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      setError(t.effectsPage.errorInvalidFile);
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setError(t.effectsPage.errorFileTooLarge);
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      setUploadedImage(result);
-      setResultImage(null);
-      setError(null);
-    };
-    reader.readAsDataURL(file);
+    if (file) handleFile(file);
   };
 
   const handleGenerate = async () => {
@@ -85,81 +69,15 @@ export default function EffectTool({ effectId, effectName, effectPrompt }: Effec
     setIsProcessing(true);
     setError(null);
     setResultImage(null);
-    setProgress(0);
-
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 95) {
-          clearInterval(progressInterval);
-          return 95;
-        }
-        return prev + Math.random() * 8;
-      });
-    }, 400);
 
     try {
-      let finalPrompt = effectPrompt;
-
-      try {
-        const analyzeResponse = await fetch("/api/analyze-image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: uploadedImage }),
-        });
-
-        if (analyzeResponse.ok) {
-          const text = await analyzeResponse.text();
-          const analyzeData = JSON.parse(text);
-          if (analyzeData.description) {
-            finalPrompt = `Based on a photo of: ${analyzeData.description}. Apply this transformation: ${effectPrompt}. Keep the same subject, pose and composition.`;
-          }
-        }
-      } catch {
-        finalPrompt = `Apply this photo effect: ${effectPrompt}`;
-      }
-
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: finalPrompt,
-          image: uploadedImage,
-          width: 1024,
-          height: 1024,
-          skipWatermark: true,
-        }),
-      });
-
-      clearInterval(progressInterval);
-      setProgress(100);
-
-      if (!response.ok) {
-        let errorMsg = t.effectsPage.generationFailed;
-        try {
-          const text = await response.text();
-          const errorData = JSON.parse(text);
-          errorMsg = errorData.error || errorMsg;
-        } catch {
-          errorMsg = `Server error (${response.status})`;
-        }
-        throw new Error(errorMsg);
-      }
-
-      let data;
-      try {
-        const text = await response.text();
-        data = JSON.parse(text);
-      } catch {
-        throw new Error("Invalid response from server");
-      }
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setResultImage(data.imageUrl);
+      const result = await applyFilter(uploadedImage, effectId);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      setResultImage(result);
     } catch (err) {
-      clearInterval(progressInterval);
       setError((err as Error).message || t.effectsPage.generationFailed);
     } finally {
       setIsProcessing(false);
-      setProgress(0);
     }
   };
 
@@ -180,8 +98,8 @@ export default function EffectTool({ effectId, effectName, effectPrompt }: Effec
         const blob = await response.blob();
         const file = new File([blob], `${effectId}-effect.png`, { type: blob.type });
         await navigator.share({
-          title: `${effectName} - AI Magic Effect`,
-          text: `Check out my ${effectName} AI effect!`,
+          title: `${effectName} - Photo Effect`,
+          text: `Check out my ${effectName} photo effect!`,
           files: [file],
         });
       } else {
@@ -289,11 +207,18 @@ export default function EffectTool({ effectId, effectName, effectPrompt }: Effec
             </>
           ) : (
             <>
-              <Sparkles className="w-5 h-5" />
+              <Zap className="w-5 h-5" />
               {t.effectsPage.applyingEffect.replace("{name}", effectName)}
             </>
           )}
         </button>
+
+        <div className="flex items-center gap-2 px-4 py-3 bg-green-500/10 border border-green-500/20 rounded-xl">
+          <Zap className="w-4 h-4 text-green-400 flex-shrink-0" />
+          <p className="text-sm text-green-300">
+            Instant processing — no AI generation needed, results in seconds!
+          </p>
+        </div>
 
         {error && (
           <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-xl">
@@ -313,7 +238,6 @@ export default function EffectTool({ effectId, effectName, effectPrompt }: Effec
           <div className="p-6">
             {isProcessing ? (
               <div className="relative aspect-square bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl overflow-hidden border border-purple-500/20 flex items-center justify-center">
-                <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.05),transparent)] animate-[shimmer_2s_infinite]" />
                 <div className="text-center">
                   <div className="w-16 h-16 mx-auto mb-4 relative">
                     <div className="absolute inset-0 bg-purple-500 rounded-full animate-ping opacity-30" />
@@ -324,17 +248,8 @@ export default function EffectTool({ effectId, effectName, effectPrompt }: Effec
                   <h4 className="text-lg font-semibold text-white mb-2">
                     {t.effectsPage.applyingEffect.replace("{name}", effectName)}
                   </h4>
-                  <p className="text-sm text-gray-400 mb-4">
-                    {t.effectsPage.aiWorkingMagic}
-                  </p>
-                  <div className="w-48 mx-auto bg-gray-700 rounded-full h-2 overflow-hidden">
-                    <div
-                      className="bg-gradient-to-r from-purple-500 to-pink-500 h-full rounded-full transition-all duration-300 ease-out"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    {Math.round(progress)}%
+                  <p className="text-sm text-gray-400">
+                    Processing your image...
                   </p>
                 </div>
               </div>
@@ -392,13 +307,6 @@ export default function EffectTool({ effectId, effectName, effectPrompt }: Effec
           </div>
         </div>
       </div>
-
-      <style>{`
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-      `}</style>
     </div>
   );
 }

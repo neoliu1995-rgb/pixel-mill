@@ -2,49 +2,56 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Sparkles, ArrowLeft } from "lucide-react";
+import { Sparkles, ArrowLeft, Zap } from "lucide-react";
 import EffectTool from "@/components/effects/EffectTool";
+import FilterEffectTool from "@/components/effects/FilterEffectTool";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useLanguage } from "@/components/LanguageProvider";
+import { isFilterEffect } from "@/lib/imageFilters";
+
+type EffectMode = "ai" | "filter";
+
+interface EffectConfig {
+  name: string;
+  description: string;
+  prompt?: string;
+  mode: EffectMode;
+  badge?: string;
+}
 
 export default function EffectPage() {
   const params = useParams();
   const { t } = useLanguage();
   const effectId = params.effect as string;
 
-  const effectConfig: Record<
-    string,
-    { name: string; description: string; prompt: string }
-  > = {
+  const effectConfig: Record<string, EffectConfig> = {
     chibi: {
       name: t.effects.chibi,
       description: t.effects.chibiDesc,
       prompt:
         "Transform this person into a 3D Chibi-style collectible toy figure with oversized expressive eyes, inside a retail blister packaging with a colorful backing card, neon cyberpunk styling, plastic sheen texture, toy aisle lighting",
+      mode: "ai",
+      badge: "AI",
     },
     caricature: {
       name: t.effects.caricature,
       description: t.effects.caricatureDesc,
-      prompt:
-        "Create a vibrant caricature of this person in a bold comic-book style, with exaggerated facial features, dynamic pose, colorful background, humorous and expressive",
+      mode: "filter",
+      badge: "Instant",
     },
     "retro-film": {
       name: t.effects.retroFilm,
       description: t.effects.retroFilmDesc,
-      prompt:
-        "Transform this photo into a 1990s Polaroid style image with heavy film grain, slight blur around the edges, faded colors, faint yellow light leak from the corner, nostalgic warm tones",
-    },
-    "time-travel": {
-      name: t.effects.timeTravel,
-      description: t.effects.timeTravelDesc,
-      prompt:
-        "Place this person in a 1920s Great Gatsby style ballroom, change outfit to period-appropriate elegant clothing, adjust lighting to warm golden glow of vintage chandeliers, cinematic composition",
+      mode: "filter",
+      badge: "Instant",
     },
     "pet-human": {
       name: t.effects.petHuman,
       description: t.effects.petHumanDesc,
       prompt:
         "Transform this pet into a human character version, maintaining the pet's distinctive features and personality as human traits, portrait style, detailed and expressive",
+      mode: "ai",
+      badge: "AI",
     },
   };
 
@@ -75,6 +82,8 @@ export default function EffectPage() {
     );
   }
 
+  const isFilter = config.mode === "filter" || isFilterEffect(effectId);
+
   return (
     <div className="min-h-screen bg-gray-900">
       <header className="bg-gray-800/90 backdrop-blur-md border-b border-gray-700 sticky top-0 z-50">
@@ -84,8 +93,25 @@ export default function EffectPage() {
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">{config.name}</h1>
-              <p className="text-xs text-gray-400">{t.effectsPage.aiMagicEffect}</p>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-white">{config.name}</h1>
+                {config.badge && (
+                  <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+                    config.badge === "Instant"
+                      ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                      : "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                  }`}>
+                    {config.badge === "Instant" ? (
+                      <span className="flex items-center gap-1"><Zap className="w-3 h-3" />{config.badge}</span>
+                    ) : (
+                      config.badge
+                    )}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-400">
+                {isFilter ? "Instant Photo Filter" : t.effectsPage.aiMagicEffect}
+              </p>
             </div>
           </div>
           <nav className="flex items-center gap-4">
@@ -104,8 +130,17 @@ export default function EffectPage() {
       <main className="max-w-6xl mx-auto px-4 py-12">
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/20 text-purple-400 rounded-full text-sm font-medium mb-4">
-            <Sparkles className="w-4 h-4" />
-            {t.effectsPage.aiMagicEffect}
+            {isFilter ? (
+              <>
+                <Zap className="w-4 h-4" />
+                Instant Filter
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                {t.effectsPage.aiMagicEffect}
+              </>
+            )}
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
             {config.name}
@@ -115,11 +150,18 @@ export default function EffectPage() {
           </p>
         </div>
 
-        <EffectTool
-          effectId={effectId}
-          effectName={config.name}
-          effectPrompt={config.prompt}
-        />
+        {isFilter ? (
+          <FilterEffectTool
+            effectId={effectId}
+            effectName={config.name}
+          />
+        ) : (
+          <EffectTool
+            effectId={effectId}
+            effectName={config.name}
+            effectPrompt={config.prompt || ""}
+          />
+        )}
       </main>
 
       <footer className="mt-16 bg-gray-800/50 backdrop-blur-md border-t border-gray-700">

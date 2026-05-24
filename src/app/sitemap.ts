@@ -11,7 +11,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/effects/chibi", changeFrequency: "monthly" as const, priority: 0.7 },
     { path: "/effects/caricature", changeFrequency: "monthly" as const, priority: 0.7 },
     { path: "/effects/retro-film", changeFrequency: "monthly" as const, priority: 0.7 },
-    { path: "/effects/time-travel", changeFrequency: "monthly" as const, priority: 0.7 },
     { path: "/effects/pet-human", changeFrequency: "monthly" as const, priority: 0.7 },
     { path: "/background-remover", changeFrequency: "monthly" as const, priority: 0.8 },
     { path: "/copywriting", changeFrequency: "monthly" as const, priority: 0.8 },
