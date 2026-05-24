@@ -548,7 +548,7 @@ export default function HomePage() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/30 to-transparent" />
                   <div className="absolute top-3 left-3 px-2.5 py-1 bg-pink-500/90 text-white text-xs font-bold rounded-full backdrop-blur-sm">
-                    ✨ Chibi
+                    ✨ {t.homePage.badgeChibi}
                   </div>
                 </div>
                 <div className="p-4 sm:p-5">
@@ -573,7 +573,7 @@ export default function HomePage() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/30 to-transparent" />
                   <div className="absolute top-3 left-3 px-2.5 py-1 bg-orange-500/90 text-white text-xs font-bold rounded-full backdrop-blur-sm">
-                    🎨 Caricature
+                    🎨 {t.homePage.badgeCaricature}
                   </div>
                 </div>
                 <div className="p-4 sm:p-5">
@@ -598,7 +598,7 @@ export default function HomePage() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/30 to-transparent" />
                   <div className="absolute top-3 left-3 px-2.5 py-1 bg-amber-600/90 text-white text-xs font-bold rounded-full backdrop-blur-sm">
-                    📽️ Retro Film
+                    📽️ {t.homePage.badgeRetroFilm}
                   </div>
                 </div>
                 <div className="p-4 sm:p-5">

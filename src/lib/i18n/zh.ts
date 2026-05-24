@@ -341,6 +341,8 @@ const zh = {
       download: "下载",
       share: "分享",
       tryNow: "立即体验",
+      instantProcessing: "即时处理 — 无需AI生成，秒出结果！",
+      processingImage: "正在处理图片...",
     },
     copywriting: {
       title: "AI文案生成器",
@@ -414,6 +416,22 @@ const zh = {
       downloadImage: "下载图片",
       processNewImage: "处理新图片",
       pleaseUpload: "请先上传图片开始处理",
+      cloudAiBadge: "云端AI",
+      cloudAiPowered: "云端AI驱动 — 秒速出结果！",
+      uploadingToServer: "正在上传到服务器...",
+      serverProcessingFailed: "服务器处理失败",
+      invalidServerResponse: "服务器响应无效",
+      processingInBrowser: "正在浏览器端处理（较慢）...",
+      starting: "正在开始...",
+      processingWithCloudAi: "云端AI处理中（快速）...",
+      cloudUnavailable: "云端不可用，使用浏览器处理（较慢）...",
+      applyingBackground: "正在应用背景...",
+      backgroundRemoved: "背景已移除！切换背景瞬间完成。",
+      waitTimeCloud: "通常需要5-15秒，请稍候...",
+      waitTimeBrowser: "可能需要1-3分钟，请不要关闭页面。",
+      tipCloud: "AI正在分析您的图片并移除背景，结果将自动显示在这里。",
+      tipBrowser: "浏览器处理较慢。如需更快结果，请稍后云端AI可用时再试。",
+      resultWillAppear: "结果将在此显示",
       features: {
         fast: "快速处理",
         fastDesc: "AI算法快速识别并移除背景",
@@ -594,6 +612,9 @@ const zh = {
       tryViralEffects: "试试爆款 AI 特效",
       transformPhotos: "用热门 AI 特效变身你的照片",
       tryNow: "立即体验",
+      badgeChibi: "Q版",
+      badgeCaricature: "漫画",
+      badgeRetroFilm: "复古",
     },
     effectsPage: {
       aiPowered: "AI 驱动",
@@ -619,6 +640,10 @@ const zh = {
       errorFileTooLarge: "图片大小不能超过 5MB",
       generationFailed: "生成失败，请重试",
       failedToShare: "分享失败",
+      badgeAi: "AI",
+      badgeInstant: "即时",
+      instantPhotoFilter: "即时照片滤镜",
+      instantFilter: "即时滤镜",
     },
     copywritingPage: {
       aiPowered: "AI 驱动",
@@ -897,6 +922,9 @@ const zh = {
     share: {
       title: "看看这个AI生成的图片！",
       copied: "图片链接已复制到剪贴板！",
+    },
+    ads: {
+      advertisement: "广告",
     },
   };
 

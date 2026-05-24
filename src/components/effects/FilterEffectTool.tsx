@@ -216,7 +216,7 @@ export default function FilterEffectTool({ effectId, effectName }: FilterEffectT
         <div className="flex items-center gap-2 px-4 py-3 bg-green-500/10 border border-green-500/20 rounded-xl">
           <Zap className="w-4 h-4 text-green-400 flex-shrink-0" />
           <p className="text-sm text-green-300">
-            Instant processing — no AI generation needed, results in seconds!
+            {t.effects.instantProcessing}
           </p>
         </div>
 
@@ -249,7 +249,7 @@ export default function FilterEffectTool({ effectId, effectName }: FilterEffectT
                     {t.effectsPage.applyingEffect.replace("{name}", effectName)}
                   </h4>
                   <p className="text-sm text-gray-400">
-                    Processing your image...
+                    {t.effects.processingImage}
                   </p>
                 </div>
               </div>

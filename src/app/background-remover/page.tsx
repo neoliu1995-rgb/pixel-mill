@@ -68,7 +68,7 @@ export default function BackgroundRemoverPage() {
   };
 
   const removeBackgroundServer = async (imageSrc: string): Promise<string> => {
-    setProcessingStatus("Uploading to server...");
+    setProcessingStatus(t.bgRemover.uploadingToServer);
 
     const response = await fetch("/api/bg-remove", {
       method: "POST",
@@ -77,7 +77,7 @@ export default function BackgroundRemoverPage() {
     });
 
     if (!response.ok) {
-      let errorMsg = "Server processing failed";
+      let errorMsg = t.bgRemover.serverProcessingFailed;
       try {
         const text = await response.text();
         const errData = JSON.parse(text);
@@ -91,18 +91,18 @@ export default function BackgroundRemoverPage() {
       const text = await response.text();
       data = JSON.parse(text);
     } catch {
-      throw new Error("Invalid server response");
+      throw new Error(t.bgRemover.invalidServerResponse);
     }
 
     if (!data.success || !data.imageUrl) {
-      throw new Error(data.error || "Server processing failed");
+      throw new Error(data.error || t.bgRemover.serverProcessingFailed);
     }
 
     return data.imageUrl;
   };
 
   const removeBackgroundClient = async (imageSrc: string): Promise<string> => {
-    setProcessingStatus("Processing in browser (slower)...");
+    setProcessingStatus(t.bgRemover.processingInBrowser);
 
     const maxSize = 1024;
     const resized = await new Promise<string>((resolve) => {
@@ -166,28 +166,26 @@ export default function BackgroundRemoverPage() {
 
     setIsProcessing(true);
     setError(null);
-    setProcessingStatus("Starting...");
+    setProcessingStatus(t.bgRemover.starting);
 
     try {
       let transparent = transparentImage;
 
       if (!transparent) {
         try {
-          setProcessingStatus("Processing with cloud AI (fast)...");
+          setProcessingStatus(t.bgRemover.processingWithCloudAi);
           transparent = await removeBackgroundServer(uploadedImage);
           setUsedServerAPI(true);
         } catch (serverError) {
-          logger: {
-            console.warn("Server API failed, falling back to client-side:", serverError);
-          }
-          setProcessingStatus("Cloud unavailable, using browser processing (slower)...");
+          console.warn("Server API failed, falling back to client-side:", serverError);
+          setProcessingStatus(t.bgRemover.cloudUnavailable);
           transparent = await removeBackgroundClient(uploadedImage);
           setUsedServerAPI(false);
         }
         setTransparentImage(transparent);
       }
 
-      setProcessingStatus("Applying background...");
+      setProcessingStatus(t.bgRemover.applyingBackground);
 
       if (selectedTool === "remove-bg") {
         if (transparent.startsWith("data:")) {
@@ -260,7 +258,7 @@ export default function BackgroundRemoverPage() {
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold text-white">{t.bgRemover.title}</h1>
                 <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center gap-1">
-                  <Cloud className="w-3 h-3" />Cloud AI
+                  <Cloud className="w-3 h-3" />{t.bgRemover.cloudAiBadge}
                 </span>
               </div>
               <p className="text-xs text-gray-400">{t.bgRemover.subtitle}</p>
@@ -290,7 +288,7 @@ export default function BackgroundRemoverPage() {
             <div className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-xl">
               <Zap className="w-4 h-4 text-blue-400" />
               <p className="text-sm text-blue-300">
-                Cloud AI powered — fast results in seconds!
+                {t.bgRemover.cloudAiPowered}
               </p>
             </div>
           </div>
@@ -422,7 +420,7 @@ export default function BackgroundRemoverPage() {
                     <div className="flex items-center gap-2 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg">
                       <Check className="w-4 h-4 text-green-400" />
                       <p className="text-xs text-green-300">
-                        Background removed! Switching backgrounds is instant now.
+                        {t.bgRemover.backgroundRemoved}
                       </p>
                     </div>
                   )}
@@ -508,16 +506,16 @@ export default function BackgroundRemoverPage() {
                       </h4>
                       <p className="text-sm text-gray-400 mb-4">
                         {processingStatus.includes("browser")
-                          ? "This may take 1-3 minutes. Please don't close the page."
-                          : "Usually takes 5-15 seconds. Please wait..."}
+                          ? t.bgRemover.waitTimeBrowser
+                          : t.bgRemover.waitTimeCloud}
                       </p>
                       <div className="bg-gray-800/60 rounded-lg px-4 py-3 text-left">
                         <p className="text-xs text-gray-400 flex items-start gap-2">
                           <span className="text-yellow-400 mt-0.5">💡</span>
                           <span>
                             {processingStatus.includes("browser")
-                              ? "Browser processing is slower. For faster results, please try again later when cloud AI is available."
-                              : "The AI is analyzing your image and removing the background. Your result will appear here automatically."}
+                              ? t.bgRemover.tipBrowser
+                              : t.bgRemover.tipCloud}
                           </span>
                         </p>
                       </div>

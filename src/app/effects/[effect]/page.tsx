@@ -31,19 +31,19 @@ export default function EffectPage() {
       prompt:
         "Transform this person into a 3D Chibi-style collectible toy figure with oversized expressive eyes, inside a retail blister packaging with a colorful backing card, neon cyberpunk styling, plastic sheen texture, toy aisle lighting",
       mode: "ai",
-      badge: "AI",
+      badge: t.effectsPage.badgeAi,
     },
     caricature: {
       name: t.effects.caricature,
       description: t.effects.caricatureDesc,
       mode: "filter",
-      badge: "Instant",
+      badge: t.effectsPage.badgeInstant,
     },
     "retro-film": {
       name: t.effects.retroFilm,
       description: t.effects.retroFilmDesc,
       mode: "filter",
-      badge: "Instant",
+      badge: t.effectsPage.badgeInstant,
     },
   };
 
@@ -89,11 +89,11 @@ export default function EffectPage() {
                 <h1 className="text-xl font-bold text-white">{config.name}</h1>
                 {config.badge && (
                   <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${
-                    config.badge === "Instant"
+                    config.badge === t.effectsPage.badgeInstant
                       ? "bg-green-500/20 text-green-400 border border-green-500/30"
                       : "bg-purple-500/20 text-purple-400 border border-purple-500/30"
                   }`}>
-                    {config.badge === "Instant" ? (
+                    {config.badge === t.effectsPage.badgeInstant ? (
                       <span className="flex items-center gap-1"><Zap className="w-3 h-3" />{config.badge}</span>
                     ) : (
                       config.badge
@@ -102,7 +102,7 @@ export default function EffectPage() {
                 )}
               </div>
               <p className="text-xs text-gray-400">
-                {isFilter ? "Instant Photo Filter" : t.effectsPage.aiMagicEffect}
+                {isFilter ? t.effectsPage.instantPhotoFilter : t.effectsPage.aiMagicEffect}
               </p>
             </div>
           </div>
@@ -125,7 +125,7 @@ export default function EffectPage() {
             {isFilter ? (
               <>
                 <Zap className="w-4 h-4" />
-                Instant Filter
+                {t.effectsPage.instantFilter}
               </>
             ) : (
               <>

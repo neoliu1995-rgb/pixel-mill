@@ -341,6 +341,8 @@ const en = {
       download: "Download",
       share: "Share",
       tryNow: "Try Now",
+      instantProcessing: "Instant processing — no AI generation needed, results in seconds!",
+      processingImage: "Processing your image...",
     },
     copywriting: {
       title: "AI Copywriting Generator",
@@ -414,6 +416,22 @@ const en = {
       downloadImage: "Download Image",
       processNewImage: "Process New Image",
       pleaseUpload: "Please upload an image to start processing",
+      cloudAiBadge: "Cloud AI",
+      cloudAiPowered: "Cloud AI powered — fast results in seconds!",
+      uploadingToServer: "Uploading to server...",
+      serverProcessingFailed: "Server processing failed",
+      invalidServerResponse: "Invalid server response",
+      processingInBrowser: "Processing in browser (slower)...",
+      starting: "Starting...",
+      processingWithCloudAi: "Processing with cloud AI (fast)...",
+      cloudUnavailable: "Cloud unavailable, using browser processing (slower)...",
+      applyingBackground: "Applying background...",
+      backgroundRemoved: "Background removed! Switching backgrounds is instant now.",
+      waitTimeCloud: "Usually takes 5-15 seconds. Please wait...",
+      waitTimeBrowser: "This may take 1-3 minutes. Please don't close the page.",
+      tipCloud: "The AI is analyzing your image and removing the background. Your result will appear here automatically.",
+      tipBrowser: "Browser processing is slower. For faster results, please try again later when cloud AI is available.",
+      resultWillAppear: "Result will appear here",
       features: {
         fast: "Fast Processing",
         fastDesc: "AI algorithm quickly detects and removes backgrounds",
@@ -595,6 +613,9 @@ const en = {
       tryViralEffects: "Try Viral AI Effects",
       transformPhotos: "Transform your photos with trending AI effects",
       tryNow: "Try Now",
+      badgeChibi: "Chibi",
+      badgeCaricature: "Caricature",
+      badgeRetroFilm: "Retro Film",
     },
     effectsPage: {
       aiPowered: "Powered by AI",
@@ -620,6 +641,10 @@ const en = {
       errorFileTooLarge: "Image size must be under 5MB",
       generationFailed: "Generation failed, please try again",
       failedToShare: "Failed to share",
+      badgeAi: "AI",
+      badgeInstant: "Instant",
+      instantPhotoFilter: "Instant Photo Filter",
+      instantFilter: "Instant Filter",
     },
     copywritingPage: {
       aiPowered: "AI Powered",
@@ -898,6 +923,9 @@ const en = {
     share: {
       title: "Check out this AI-generated image!",
       copied: "Image URL copied to clipboard!",
+    },
+    ads: {
+      advertisement: "Advertisement",
     },
   };
 

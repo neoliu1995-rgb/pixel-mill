@@ -16,7 +16,7 @@ export default function EffectsPage() {
       description: t.effects.chibiDesc,
       previewPrompt:
         "A 3D Chibi-style collectible toy figure of a person with oversized expressive eyes, inside a retail blister packaging with a colorful backing card, neon cyberpunk styling, plastic sheen texture, toy aisle lighting, product photography",
-      badge: "AI",
+      badge: t.effectsPage.badgeAi,
     },
     {
       id: "caricature",
@@ -24,7 +24,7 @@ export default function EffectsPage() {
       description: t.effects.caricatureDesc,
       previewPrompt:
         "A vibrant caricature of a person in a bold comic-book style, with exaggerated facial features, dynamic pose, colorful background, humorous and expressive, graphic novel art",
-      badge: "Instant",
+      badge: t.effectsPage.badgeInstant,
     },
     {
       id: "retro-film",
@@ -32,7 +32,7 @@ export default function EffectsPage() {
       description: t.effects.retroFilmDesc,
       previewPrompt:
         "A 1990s Polaroid style portrait with heavy film grain, slight blur around the edges, faded colors, faint yellow light leak from the corner, nostalgic warm tones, vintage photography",
-      badge: "Instant",
+      badge: t.effectsPage.badgeInstant,
     },
   ];
 
@@ -87,11 +87,11 @@ export default function EffectsPage() {
               />
               {effect.badge && (
                 <div className={`absolute top-3 right-3 z-10 px-2.5 py-1 text-xs font-bold rounded-full ${
-                  effect.badge === "Instant"
+                  effect.badge === t.effectsPage.badgeInstant
                     ? "bg-green-500/90 text-white backdrop-blur-sm"
                     : "bg-purple-500/90 text-white backdrop-blur-sm"
                 }`}>
-                  {effect.badge === "Instant" ? (
+                  {effect.badge === t.effectsPage.badgeInstant ? (
                     <span className="flex items-center gap-1"><Zap className="w-3 h-3" />{effect.badge}</span>
                   ) : (
                     effect.badge
