@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -15,38 +15,12 @@ import {
   Palette,
   Wand2,
   Zap,
+  Cloud,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 
 type ToolType = "remove-bg" | "white-bg" | "custom-bg";
-
-const MAX_PROCESS_SIZE = 1024;
-
-function resizeImage(dataUrl: string, maxSize: number): Promise<string> {
-  return new Promise((resolve) => {
-    const img = new window.Image();
-    img.onload = () => {
-      let { width, height } = img;
-      if (width <= maxSize && height <= maxSize) {
-        resolve(dataUrl);
-        return;
-      }
-      if (width > height) {
-        height = Math.round((height / width) * maxSize);
-        width = maxSize;
-      } else {
-        width = Math.round((width / height) * maxSize);
-        height = maxSize;
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL("image/jpeg", 0.9));
-    };
-    img.src = dataUrl;
-  });
-}
 
 export default function BackgroundRemoverPage() {
   const { t } = useLanguage();
@@ -58,69 +32,8 @@ export default function BackgroundRemoverPage() {
   const [selectedTool, setSelectedTool] = useState<ToolType>("remove-bg");
   const [customColor, setCustomColor] = useState("#FFFFFF");
   const [error, setError] = useState<string | null>(null);
-  const [processingProgress, setProcessingProgress] = useState(0);
-  const [modelLoaded, setModelLoaded] = useState(false);
-  const [modelPreloading, setModelPreloading] = useState(false);
-  const [preloadedModule, setPreloadedModule] = useState<typeof import("@imgly/background-removal") | null>(null);
-  const [autoProcessing, setAutoProcessing] = useState(false);
-
-  useEffect(() => {
-    setModelPreloading(true);
-    import("@imgly/background-removal")
-      .then((mod) => {
-        setPreloadedModule(mod);
-        setModelPreloading(false);
-      })
-      .catch(() => {
-        setModelPreloading(false);
-      });
-  }, []);
-
-  useEffect(() => {
-    if (!uploadedImage || !preloadedModule || transparentImage || autoProcessing || isProcessing) return;
-
-    let cancelled = false;
-    setAutoProcessing(true);
-    setProcessingProgress(5);
-
-    (async () => {
-      try {
-        const resized = await resizeImage(uploadedImage, MAX_PROCESS_SIZE);
-        if (cancelled) return;
-
-        setProcessingProgress(10);
-        const blob = await preloadedModule.removeBackground(resized, {
-          model: "isnet_fp16",
-          output: { format: "image/png", quality: 0.8 },
-          progress: (key: string, current: number, total: number) => {
-            if (cancelled) return;
-            if (key === "compute:inference") {
-              const pct = Math.round((current / total) * 100);
-              setProcessingProgress(30 + pct * 0.6);
-            }
-          },
-        });
-
-        if (cancelled) return;
-        const url = URL.createObjectURL(blob);
-        setTransparentImage(url);
-        setModelLoaded(true);
-        setProcessingProgress(100);
-      } catch {
-        if (!cancelled) {
-          setError(t.bgRemover.error.processingFailed);
-        }
-      } finally {
-        if (!cancelled) {
-          setAutoProcessing(false);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [uploadedImage, preloadedModule, transparentImage, autoProcessing, isProcessing, t.bgRemover.error.processingFailed]);
+  const [processingStatus, setProcessingStatus] = useState("");
+  const [usedServerAPI, setUsedServerAPI] = useState(false);
 
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -138,8 +51,7 @@ export default function BackgroundRemoverPage() {
       setProcessedImage(null);
       setTransparentImage(null);
       setError(null);
-      setModelLoaded(false);
-      setProcessingProgress(0);
+      setUsedServerAPI(false);
     };
     reader.readAsDataURL(file);
   }, [t.bgRemover.error.invalidFile, t.bgRemover.error.fileTooLarge]);
@@ -155,7 +67,79 @@ export default function BackgroundRemoverPage() {
     if (file) handleFile(file);
   };
 
-  const applyBackgroundColor = (transparentSrc: string, color: string): Promise<string> => {
+  const removeBackgroundServer = async (imageSrc: string): Promise<string> => {
+    setProcessingStatus("Uploading to server...");
+
+    const response = await fetch("/api/bg-remove", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: imageSrc }),
+    });
+
+    if (!response.ok) {
+      let errorMsg = "Server processing failed";
+      try {
+        const text = await response.text();
+        const errData = JSON.parse(text);
+        errorMsg = errData.error || errorMsg;
+      } catch {}
+      throw new Error(errorMsg);
+    }
+
+    let data;
+    try {
+      const text = await response.text();
+      data = JSON.parse(text);
+    } catch {
+      throw new Error("Invalid server response");
+    }
+
+    if (!data.success || !data.imageUrl) {
+      throw new Error(data.error || "Server processing failed");
+    }
+
+    return data.imageUrl;
+  };
+
+  const removeBackgroundClient = async (imageSrc: string): Promise<string> => {
+    setProcessingStatus("Processing in browser (slower)...");
+
+    const maxSize = 1024;
+    const resized = await new Promise<string>((resolve) => {
+      const img = new window.Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width <= maxSize && height <= maxSize) {
+          resolve(imageSrc);
+          return;
+        }
+        if (width > height) {
+          height = Math.round((height / width) * maxSize);
+          width = maxSize;
+        } else {
+          width = Math.round((width / height) * maxSize);
+          height = maxSize;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", 0.9));
+      };
+      img.src = imageSrc;
+    });
+
+    const { removeBackground } = await import("@imgly/background-removal");
+    const blob = await removeBackground(resized, {
+      model: "isnet_fp16",
+      output: { format: "image/png", quality: 0.8 },
+    });
+
+    return URL.createObjectURL(blob);
+  };
+
+  const applyBackgroundColor = (imageSrc: string, color: string): Promise<string> => {
     return new Promise((resolve, reject) => {
       const img = new window.Image();
       img.crossOrigin = "anonymous";
@@ -170,7 +154,7 @@ export default function BackgroundRemoverPage() {
         resolve(canvas.toDataURL("image/png"));
       };
       img.onerror = reject;
-      img.src = transparentSrc;
+      img.src = imageSrc;
     });
   };
 
@@ -180,32 +164,55 @@ export default function BackgroundRemoverPage() {
       return;
     }
 
-    if (!transparentImage) {
-      setError(t.bgRemover.error.processingFailed);
-      return;
-    }
-
     setIsProcessing(true);
     setError(null);
+    setProcessingStatus("Starting...");
 
     try {
+      let transparent = transparentImage;
+
+      if (!transparent) {
+        try {
+          setProcessingStatus("Processing with cloud AI (fast)...");
+          transparent = await removeBackgroundServer(uploadedImage);
+          setUsedServerAPI(true);
+        } catch (serverError) {
+          logger: {
+            console.warn("Server API failed, falling back to client-side:", serverError);
+          }
+          setProcessingStatus("Cloud unavailable, using browser processing (slower)...");
+          transparent = await removeBackgroundClient(uploadedImage);
+          setUsedServerAPI(false);
+        }
+        setTransparentImage(transparent);
+      }
+
+      setProcessingStatus("Applying background...");
+
       if (selectedTool === "remove-bg") {
-        const response = await fetch(transparentImage);
-        const blob = await response.blob();
-        const reader = new FileReader();
-        const dataUrl = await new Promise<string>((resolve) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
-        setProcessedImage(dataUrl);
+        if (transparent.startsWith("data:")) {
+          setProcessedImage(transparent);
+        } else {
+          const response = await fetch(transparent);
+          const blob = await response.blob();
+          const reader = new FileReader();
+          const dataUrl = await new Promise<string>((resolve) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+          setProcessedImage(dataUrl);
+        }
       } else {
         const bgColor = selectedTool === "white-bg" ? "#FFFFFF" : customColor;
-        const result = await applyBackgroundColor(transparentImage, bgColor);
+        const result = await applyBackgroundColor(transparent, bgColor);
         setProcessedImage(result);
       }
+
+      setProcessingStatus("");
     } catch (err) {
       const message = (err as Error).message;
       setError(message || t.bgRemover.error.processingFailed);
+      setProcessingStatus("");
     } finally {
       setIsProcessing(false);
     }
@@ -224,8 +231,7 @@ export default function BackgroundRemoverPage() {
     setProcessedImage(null);
     setTransparentImage(null);
     setError(null);
-    setModelLoaded(false);
-    setProcessingProgress(0);
+    setUsedServerAPI(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -242,9 +248,6 @@ export default function BackgroundRemoverPage() {
     { type: "custom-bg", icon: <Palette className="w-6 h-6" />, label: t.bgRemover.customBg, color: "orange" },
   ];
 
-  const isAutoProcessing = autoProcessing && !modelLoaded;
-  const showProgress = isAutoProcessing || isProcessing;
-
   return (
     <div className="min-h-screen bg-gray-900">
       <header className="bg-gray-800/90 backdrop-blur-md border-b border-gray-700 sticky top-0 z-50">
@@ -256,8 +259,8 @@ export default function BackgroundRemoverPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold text-white">{t.bgRemover.title}</h1>
-                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-green-500/20 text-green-400 border border-green-500/30 flex items-center gap-1">
-                  <Zap className="w-3 h-3" />Client-side
+                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center gap-1">
+                  <Cloud className="w-3 h-3" />Cloud AI
                 </span>
               </div>
               <p className="text-xs text-gray-400">{t.bgRemover.subtitle}</p>
@@ -284,10 +287,10 @@ export default function BackgroundRemoverPage() {
             {t.bgRemover.heroDescription}
           </p>
           <div className="mt-4 flex justify-center">
-            <div className="flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-xl">
-              <Zap className="w-4 h-4 text-green-400" />
-              <p className="text-sm text-green-300">
-                100% client-side processing — your images never leave your browser!
+            <div className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+              <Zap className="w-4 h-4 text-blue-400" />
+              <p className="text-sm text-blue-300">
+                Cloud AI powered — fast results in seconds!
               </p>
             </div>
           </div>
@@ -415,35 +418,28 @@ export default function BackgroundRemoverPage() {
                     </div>
                   )}
 
-                  {modelLoaded && !isAutoProcessing && (
+                  {transparentImage && (
                     <div className="flex items-center gap-2 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg">
                       <Check className="w-4 h-4 text-green-400" />
                       <p className="text-xs text-green-300">
-                        AI model loaded — background removal is instant now!
+                        Background removed! Switching backgrounds is instant now.
                       </p>
                     </div>
                   )}
 
                   <button
                     onClick={handleGenerate}
-                    disabled={isProcessing || isAutoProcessing}
+                    disabled={isProcessing}
                     className={`w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl font-semibold text-lg transition-all duration-300 ${
-                      isProcessing || isAutoProcessing
-                        ? isAutoProcessing
-                          ? "bg-yellow-600/80 text-yellow-100 cursor-wait"
-                          : "bg-gray-700 text-gray-500 cursor-not-allowed"
+                      isProcessing
+                        ? "bg-gray-700 text-gray-500 cursor-not-allowed"
                         : "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 hover:shadow-lg hover:shadow-purple-500/25 hover:scale-[1.02]"
                     }`}
                   >
-                    {isAutoProcessing ? (
+                    {isProcessing ? (
                       <>
                         <Loader2 className="w-5 h-5 animate-spin" />
-                        Preparing...
-                      </>
-                    ) : isProcessing ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        {t.bgRemover.processing}
+                        {processingStatus || t.bgRemover.processing}
                       </>
                     ) : (
                       <>
@@ -498,7 +494,7 @@ export default function BackgroundRemoverPage() {
                       </button>
                     </div>
                   </div>
-                ) : showProgress ? (
+                ) : isProcessing ? (
                   <div className="aspect-square bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl flex items-center justify-center border border-purple-500/20">
                     <div className="text-center px-8">
                       <div className="w-20 h-20 mx-auto mb-6 relative">
@@ -508,21 +504,10 @@ export default function BackgroundRemoverPage() {
                         </div>
                       </div>
                       <h4 className="text-lg font-semibold text-white mb-2">
-                        {t.bgRemover.processing}
+                        {processingStatus || t.bgRemover.processing}
                       </h4>
-                      <p className="text-sm text-gray-400 mb-6">
-                        {!modelLoaded
-                          ? "Loading AI model (first time only)..."
-                          : t.bgRemover.identifying}
-                      </p>
-                      <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
-                        <div
-                          className="bg-gradient-to-r from-purple-500 to-pink-500 h-full rounded-full transition-all duration-500 ease-out"
-                          style={{ width: `${processingProgress}%` }}
-                        />
-                      </div>
-                      <p className="text-sm text-purple-400 mt-3 font-medium">
-                        {Math.round(processingProgress)}%
+                      <p className="text-sm text-gray-400">
+                        Usually takes 5-15 seconds
                       </p>
                     </div>
                   </div>
@@ -536,12 +521,6 @@ export default function BackgroundRemoverPage() {
                       <p className="text-sm text-gray-500 mt-1">
                         {t.bgRemover.resultWillAppear}
                       </p>
-                      {modelPreloading && (
-                        <p className="text-xs text-purple-400 mt-3 flex items-center justify-center gap-1">
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          Pre-loading AI model...
-                        </p>
-                      )}
                     </div>
                   </div>
                 )}
