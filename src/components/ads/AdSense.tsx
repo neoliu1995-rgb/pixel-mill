@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 declare global {
   interface Window {
@@ -26,30 +26,41 @@ export default function AdSense({
   layoutKey,
   className = "w-full h-auto",
 }: AdSenseProps) {
+  const adRef = useRef<HTMLDivElement>(null);
+  const pushed = useRef(false);
+
   useEffect(() => {
+    if (pushed.current) return;
+
     const pushAd = () => {
       try {
-        if (typeof window !== "undefined" && window.adsbygoogle) {
-          window.adsbygoogle.push({});
+        if (typeof window !== "undefined") {
+          (window.adsbygoogle = window.adsbygoogle || []).push({});
+          pushed.current = true;
         }
       } catch (err) {
-        console.error("AdSense error:", err);
+        console.error("AdSense push error:", err);
       }
     };
 
-    if (document.readyState === "complete") {
-      pushAd();
-    } else {
-      window.addEventListener("load", pushAd);
-      return () => window.removeEventListener("load", pushAd);
+    pushAd();
+
+    if (!pushed.current) {
+      const interval = setInterval(() => {
+        if (window.adsbygoogle) {
+          pushAd();
+          if (pushed.current) clearInterval(interval);
+        }
+      }, 500);
+      return () => clearInterval(interval);
     }
   }, []);
 
   return (
-    <div className={`${className} ads-container`}>
+    <div ref={adRef} className={`${className} ads-container`}>
       <ins
         className="adsbygoogle"
-        style={{ display: "block", width: "100%", height: "auto" }}
+        style={{ display: "block" }}
         data-ad-client={process.env.NEXT_PUBLIC_ADSENSE_CLIENT || "ca-pub-XXXXXXXXXX"}
         data-ad-slot={slot}
         data-ad-format={format}

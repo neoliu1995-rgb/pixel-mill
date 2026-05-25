@@ -46,12 +46,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <AdSenseScriptServer />
+      </head>
       <body className={inter.className}>
         <Suspense fallback={<div className="min-h-screen bg-white" />}>
           <ClientLayout>{children}</ClientLayout>
         </Suspense>
         <GoogleAnalytics />
-        <AdSenseScriptServer />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
